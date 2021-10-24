@@ -1,8 +1,9 @@
 import os
 import torch
+import shutil
 import scipy.io
 import numpy as np
-
+from utils import get_yaml_value
 
 def evaluate(qf, ql, gf, gl):
     # print(qf.shape) torch.Size([512])
@@ -144,5 +145,13 @@ for i in range(len(query_label)):
 CMC = CMC.float()
 CMC = CMC/len(query_label)
 
-print(round(len(gallery_label)*0.01))
-print('Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f'%(CMC[0]*100,CMC[4]*100,CMC[9]*100, CMC[round(len(gallery_label)*0.01)]*100, ap/len(query_label)*100))
+# show result and save
+save_path = os.path.join('save_model_weight',get_yaml_value('name'))
+save_txt_path = os.path.join(save_path,'result.txt')
+result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f'%(CMC[0]*100,CMC[4]*100,CMC[9]*100, CMC[round(len(gallery_label)*0.01)]*100, ap/len(query_label)*100)
+with open(save_txt_path,'w') as f:
+    f.write(result)
+    f.close()
+shutil.copy('settings.yaml', os.path.join(save_path,"settings_saved.yaml"))
+# print(round(len(gallery_label)*0.01))
+print(result)
