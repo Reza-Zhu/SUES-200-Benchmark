@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 import os
-
 import torch
 import scipy.io
 from torch import nn

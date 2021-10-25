@@ -20,11 +20,11 @@ def create_datasets(path, data_list, character):
         # print("src",i)
         # print("dst",path_)
         shutil.copytree(i, path_)
-    print(character," processed ",count," classes ......")
+    print(character, " processed ", count, " classes ......")
 
 
 # 数据集分割系数
-SPLIT_VALUE = 0.8
+SPLIT_VALUE = 0.6
 
 # 原始数据地址
 raw_datasets_path = "../../RAW_DATASETS"
@@ -51,6 +51,11 @@ for index_name in video_name:
     # print(drone_data_list)
     train_data_num = int(len(drone_data_list) * SPLIT_VALUE)
     test_data_num = int(len(drone_data_list) * (1 - SPLIT_VALUE))
+
+
+    print(train_data_num)
+    print(test_data_num)
+
 
     Training_satellite_data_list = satellite_data_list[:train_data_num]
     Training_drone_data_list = drone_data_list[:train_data_num]

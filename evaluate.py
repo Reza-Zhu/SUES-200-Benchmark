@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import torch
 import shutil
@@ -108,7 +109,7 @@ def compute_mAP(index, good_index, junk_index):
     return ap, cmc
 
 ############################### main function ###############################
-print("evaluating Start >>>>>>>>")
+print("Evaluating Start >>>>>>>>")
 
 # load feature data
 result = scipy.io.loadmat("pytorch_result.mat")

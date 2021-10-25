@@ -1,10 +1,11 @@
 # super parameters
 
+batch_size : 16
+
 model : resnet
 height : 150
-batch_size : 32
-classes : 119
+classes : 89
 num_epochs : 20
 drop_rate : 0.1
 lr : 0.005
-name: 2021-10-23-19:48:53
+name: 2021-10-25-19:59:35

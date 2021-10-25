@@ -9,7 +9,7 @@ train_data_path = "../Datasets/Training/150"
 # test_data_path = "../Datasets/Testing/150/"
 # satellite_test_data_path = "../Datasets/Testing/150/label"
 
-Batch_size = get_yaml_value("batch_size")
+Batch_size = get_yaml_value('batch_size')
 height = get_yaml_value("height")
 def Create_Training_Datasets(train_data_path="../Datasets/Training/{}".format(height), batch_size=Batch_size):
     training_data_loader = {}
