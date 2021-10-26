@@ -2,10 +2,10 @@
 
 batch_size : 16
 
-model : resnet
+model : dense
 height : 150
 classes : 89
 num_epochs : 20
 drop_rate : 0.1
 lr : 0.005
-name: 2021-10-25-19:59:35
+name: dense_2021-10-26-10:45:06

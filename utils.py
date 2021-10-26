@@ -13,13 +13,14 @@ def get_yaml_value(key_name, file_name="settings.yaml"):
     return params
 
 
-def save_network(network, dir_name, epoch_label):
+def save_network(network, model_name, dir_name, epoch_label):
+    dir_name = model_name + "_" + dir_name
     dict_name = {"name": dir_name}
     with open("settings.yaml", "w", encoding="utf-8") as f:
         yaml.dump(dict_name, f)
         
     if not os.path.isdir('./save_model_weight/' + dir_name):
-        os.mkdir('./save_model_weight/'+dir_name)
+        os.mkdir('./save_model_weight/' + dir_name)
 
     if isinstance(epoch_label, int):
         save_filename = 'net_%03d.pth' % epoch_label

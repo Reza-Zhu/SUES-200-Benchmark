@@ -118,12 +118,44 @@ class VGG(nn.Module):
         return y1, y2
 
 
-class DenseNet(nn.Module):
+class DenseNet_base(nn.Module):
     def __init__(self):
-        super(DenseNet, self).__init__()
+        super(DenseNet_base, self).__init__()
         dense_model = models.densenet121(pretrained=True)
         dense_model.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
         self.model = dense_model
+
+    def forward(self, x):
+        x = self.model.features(x)
+        x = self.model.avgpool2(x)
+        x = x.view(x.size(0), x.size(1))
+        return x
+
+
+class DenseNet(nn.Module):
+    def __init__(self, class_num, drop_rate):
+        super(DenseNet, self).__init__()
+        self.model_1 = DenseNet_base()
+        self.model_2 = DenseNet_base()
+        self.classifier = ClassBlock(1024, class_num, drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            x1 = self.model_1(x1)
+            # print(x1.size())
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            x2 = self.model_2(x2)
+            # print(x2.size())
+            y2 = self.classifier(x2)
+
+        return y1, y2
+
 
 
 def weights_init_kaiming(m):
@@ -148,19 +180,14 @@ def weights_init_classifier(m):
 if __name__ == '__main__':
 # Here I left a simple forward function.
 # Test the model, before you train it.
-    net1 = ResNet(10, 0.1)
-    net2 = VGG(100,0.4)
-    # net = LCM(201,0.4)
-    #net.classifier = nn.Sequential()
-    # print(net1)
-    # print("---------------------------")
-    # print(net2)
-    # input = Variable(torch.FloatTensor(8, 3, 256, 256))
-    # output,output = net(input,input)
-    # print('net output size:')
-    # print(output.shape)
+    net1 = DenseNet(100,0.1)
+    net2 = ResNet(100,0.1)
+    net3 = VGG(100,0.1)
+    print(net1)
+    # print(net2,net3)
 
 model_dict = {
     "resnet": ResNet,
     "vgg": VGG,
+    "dense": DenseNet,
 }
