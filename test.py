@@ -89,4 +89,5 @@ with torch.no_grad():
     scipy.io.savemat('pytorch_result.mat', result)
     # print(result)
 print(">>>>>>>> Testing END")
-# os.system('python evaluate.py')
+os.system("source /home/ubuntu/pytorch/bin/activate && python evaluate.py")
+

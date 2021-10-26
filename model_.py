@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 from torchvision import models
+from efficientnet.model import EfficientNet
 
 class ClassBlock(nn.Module):
     def __init__(self, input_dim, class_num, drop_rate, num_bottleneck=512):
@@ -51,8 +52,6 @@ class ResNet_base(nn.Module):
         return x
 
 
-
-
 class ResNet(nn.Module):
     def __init__(self, class_num, drop_rate):
         super(ResNet, self).__init__()
@@ -67,13 +66,17 @@ class ResNet(nn.Module):
         if x1 is None:
             y1 = None
         else:
+            # print(x1.size())
             x1 = self.model_1(x1)
+            # print(x1.size())
             y1 = self.classifier(x1)
 
         if x2 is None:
             y2 = None
         else:
+            # print(x2.size())
             x2 = self.model_2(x2)
+            # print(x2.size())
             y2 = self.classifier(x2)
 
         return y1, y2
@@ -153,7 +156,45 @@ class DenseNet(nn.Module):
             x2 = self.model_2(x2)
             # print(x2.size())
             y2 = self.classifier(x2)
+        return y1, y2
 
+class EfficientNet_base(nn.Module):
+    def __init__(self):
+        super(EfficientNet_base, self).__init__()
+        efficient_net = EfficientNet.from_pretrained('efficientnet-b4')
+        # efficient_net.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
+        self.model = efficient_net
+
+    def forward(self, x):
+        x = self.model(x)
+        # x = self.model.avgpool2(x)
+        x = x.view(x.size(0), x.size(1))
+        return x
+
+
+class Efficient_Net(nn.Module):
+    def __init__(self, classes, drop_rate):
+        super(Efficient_Net, self).__init__()
+        self.model_1 = EfficientNet_base()
+        self.model_2 = EfficientNet_base()
+        self.classifier = ClassBlock(1792,classes,drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            # print(x1.size())
+            x1 = self.model_1(x1)
+            print(x1.size())
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            # print(x2.size())
+            x2 = self.model_2(x2)
+            # print(x2.size())
+            y2 = self.classifier(x2)
         return y1, y2
 
 
@@ -178,16 +219,23 @@ def weights_init_classifier(m):
         init.constant_(m.bias.data, 0.0)
 
 if __name__ == '__main__':
-# Here I left a simple forward function.
-# Test the model, before you train it.
-    net1 = DenseNet(100,0.1)
-    net2 = ResNet(100,0.1)
-    net3 = VGG(100,0.1)
-    print(net1)
-    # print(net2,net3)
+    # import ssl
+
+    # ssl._create_default_https_context = ssl._create_unverified_context
+    model = Efficient_Net(100,0.1)
+    # model = EfficientNet_b()
+    print(model)
+    # print(model.extract_features)
+    # Here I left a simple forward function.
+    # Test the model, before you train it.
+    input = torch.randn(16, 3, 384, 384)
+    output, output = model(input, input)
+    print(output.size())
+    # print(output)
 
 model_dict = {
     "resnet": ResNet,
     "vgg": VGG,
     "dense": DenseNet,
+    "efficient": Efficient_Net,
 }

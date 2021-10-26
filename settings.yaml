@@ -1,11 +1,10 @@
 # super parameters
 
-batch_size : 16
-
-model : dense
-height : 150
+batch_size : 8
+model : resnet
+height : 300
 classes : 89
-num_epochs : 20
+num_epochs : 15
 drop_rate : 0.1
 lr : 0.005
-name: dense_2021-10-26-10:45:06
+name: resnet_250_2021-10-26-21:07:24

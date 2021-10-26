@@ -112,3 +112,5 @@ for epoch in range(num_epochs):
     draw_curve(epoch)
     if (epoch + 1) % 5 == 0:
         save_network(model, model_name, model_save_name, epoch + 1)
+
+os.system("source /home/ubuntu/pytorch/bin/activate && python test.py")

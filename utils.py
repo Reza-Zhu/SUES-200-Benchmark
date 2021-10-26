@@ -14,10 +14,13 @@ def get_yaml_value(key_name, file_name="settings.yaml"):
 
 
 def save_network(network, model_name, dir_name, epoch_label):
-    dir_name = model_name + "_" + dir_name
-    dict_name = {"name": dir_name}
-    with open("settings.yaml", "w", encoding="utf-8") as f:
-        yaml.dump(dict_name, f)
+    height = get_yaml_value('height')
+    dir_name = model_name + "_" + str(height) + "_" + dir_name
+    with open("settings.yaml", "r", encoding="utf-8") as f:
+        dict = yaml.load(f, Loader=yaml.FullLoader)
+        dict['name'] = dir_name
+        with open("settings.yaml", "w", encoding="utf-8") as f:
+                yaml.dump(dict, f)
         
     if not os.path.isdir('./save_model_weight/' + dir_name):
         os.mkdir('./save_model_weight/' + dir_name)
