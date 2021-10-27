@@ -7,6 +7,7 @@ import scipy.io
 import numpy as np
 from utils import get_yaml_value
 
+
 def evaluate(qf, ql, gf, gl):
     # print(qf.shape) torch.Size([512])
     # print(gf.shape) torch.Size([51355, 512])
@@ -52,6 +53,7 @@ def evaluate(qf, ql, gf, gl):
     CMC_tmp = compute_mAP(index, good_index, junk_index)
     return CMC_tmp
 
+
 def compute_mAP(index, good_index, junk_index):
     # CMC就是recall的，只要前K里面有一个正确答案就算recall成功是1否则是0
     # mAP是传统retrieval的指标，算的是 recall和precision曲线，这个曲线和x轴的面积。
@@ -60,7 +62,7 @@ def compute_mAP(index, good_index, junk_index):
     ap = 0
     cmc = torch.IntTensor(len(index)).zero_()
     # print(cmc.shape) torch.Size([51355])
-    if good_index.size == 0:   # if empty
+    if good_index.size == 0:  # if empty
         cmc[0] = -1
         return ap, cmc
 
@@ -81,7 +83,7 @@ def compute_mAP(index, good_index, junk_index):
     # print(mask.shape)  (51355,)
     # 51355 中 54 个对应元素变为了True
 
-    rows_good = np.argwhere(mask==True)
+    rows_good = np.argwhere(mask == True)
     # print(rows_good.shape) (54, 1)
     # rows_good 得到这 54 个为 True 元素的索引位置
 
@@ -95,22 +97,31 @@ def compute_mAP(index, good_index, junk_index):
 
     # print(cmc)
     for i in range(ngood):
-        d_recall = 1.0/ngood
+        d_recall = 1.0 / ngood
         # d_racall = 1/54
-        precision = (i+1)*1.0/(rows_good[i]+1)
+        precision = (i + 1) * 1.0 / (rows_good[i] + 1)
         # n/sum
         # print("row_good[]", i, rows_good[i])
         # print(precision)
-        if rows_good[i]!=0:
-            old_precision = i*1.0/rows_good[i]
+        if rows_good[i] != 0:
+            old_precision = i * 1.0 / rows_good[i]
         else:
-            old_precision=1.0
-        ap = ap + d_recall*(old_precision + precision)/2
+            old_precision = 1.0
+        ap = ap + d_recall * (old_precision + precision) / 2
 
     return ap, cmc
 
+
 ############################### main function ###############################
+
 print("Evaluating Start >>>>>>>>")
+
+if get_yaml_value("query") == "satellite":
+    query_name = 'satellite'
+    gallery_name = 'drone'
+elif get_yaml_value("query") == "drone":
+    query_name = 'drone'
+    gallery_name = 'satellite'
 
 # load feature data
 result = scipy.io.loadmat("pytorch_result.mat")
@@ -123,9 +134,8 @@ query_label = result['query_label'][0]
 gallery_feature = torch.FloatTensor(result['gallery_f'])
 gallery_label = result['gallery_label'][0]
 
-
-print(len(query_label))
-print(len(gallery_label))
+# print(len(query_label))
+# print(len(gallery_label))
 
 # fed tensor to GPU
 query_feature = query_feature.cuda()
@@ -138,22 +148,24 @@ ap = 0.0
 
 for i in range(len(query_label)):
     ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label)
-    if CMC_tmp[0] == -1 :
+    if CMC_tmp[0] == -1:
         continue
     CMC += CMC_tmp
     ap += ap_tmp
-    
+
 # average CMC
 CMC = CMC.float()
-CMC = CMC/len(query_label)
+CMC = CMC / len(query_label)
 
 # show result and save
-save_path = os.path.join('save_model_weight',get_yaml_value('name'))
-save_txt_path = os.path.join(save_path,'result.txt')
-result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f'%(CMC[0]*100,CMC[4]*100,CMC[9]*100, CMC[round(len(gallery_label)*0.01)]*100, ap/len(query_label)*100)
-with open(save_txt_path,'w') as f:
+save_path = os.path.join('save_model_weight', get_yaml_value('name'))
+save_txt_path = os.path.join(save_path, '%s_to_%s_result.txt' % (query_name, gallery_name))
+result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
+    CMC[0] * 100, CMC[4] * 100, CMC[9] * 100, CMC[round(len(gallery_label) * 0.01)] * 100,
+    ap / len(query_label) * 100)
+with open(save_txt_path, 'w') as f:
     f.write(result)
     f.close()
-shutil.copy('settings.yaml', os.path.join(save_path,"settings_saved.yaml"))
+shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
 # print(round(len(gallery_label)*0.01))
 print(result)

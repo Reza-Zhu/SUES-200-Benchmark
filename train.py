@@ -5,7 +5,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import models
 from torch.optim import lr_scheduler
 import torch.backends.cudnn as cudnn
 

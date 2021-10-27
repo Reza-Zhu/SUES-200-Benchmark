@@ -3,7 +3,7 @@ import os
 import torch
 import scipy.io
 from torch import nn
-from utils import fliplr, load_network, which_view, get_id
+from utils import fliplr, load_network, which_view, get_id,get_yaml_value
 from Preprocessing import Create_Testing_Datasets
 
 
@@ -58,16 +58,18 @@ model.classifier.classifier = nn.Sequential()
 model = model.eval()
 model = model.cuda()
 
-query_name = 'query_satellite'
-# query_name = 'query_drone'
+if get_yaml_value("query") == "satellite":
+    query_name = 'query_satellite'
+    gallery_name = 'gallery_drone'
+elif get_yaml_value("query") == "drone":
+    query_name = 'query_drone'
+    gallery_name = 'gallery_satellite'
 
-# gallery_name = 'gallery_satellite'
-gallery_name = 'gallery_drone'
 
-which_gallery = which_view(gallery_name)
 which_query = which_view(query_name)
+which_gallery = which_view(gallery_name)
 
-print('%d -> %d:' % (which_query, which_gallery))
+print('%s -> %s:' % (query_name, gallery_name))
 
 image_datasets, data_loader = Create_Testing_Datasets()
 # print(image_datasets["query_drone"].imgs)
