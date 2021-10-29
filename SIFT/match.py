@@ -2,8 +2,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-
 def fl_match(kp1, de1, kp2, de2):
     fl = cv2.FlannBasedMatcher()
     matches = fl.knnMatch(de1, de2, 2)
@@ -16,13 +14,15 @@ def fl_match(kp1, de1, kp2, de2):
         if m.distance < 0.8 * n.distance:
             matchesMask[i] = [1, 0]
             count = count + 1
-    print(count)
-    draw_params = dict(matchesMask=matchesMask,
-                       flags=0)
+    # print(count)
+    # draw_params = dict(matchesMask=matchesMask,
+    #                    flags=0)
+    #
+    # img = cv2.drawMatchesKnn(drone_img, kp1, satellite_img, kp2, matches, None, **draw_params)
+    # cv2.imshow("img",img)
+    # cv2.waitKey()
 
-    img = cv2.drawMatchesKnn(drone_img, kp1, satellite_img, kp2, matches, None, **draw_params)
-    cv2.imshow("img",img)
-    cv2.waitKey()
+    return count
 
 def bf_match(kp1, de1, kp2, de2):
     bf = cv2.BFMatcher(crossCheck=True)
@@ -40,61 +40,75 @@ def bf_match(kp1, de1, kp2, de2):
         if bf_matches[i].distance > max_distance:
             max_distance = bf_matches[i].distance
 
-    print("min: ", min_distance)
-    print("max: ", max_distance)
+    # print("min: ", min_distance)
+    # print("max: ", max_distance)
 
     good_matches = []
     for i in range(len(bf_matches)):
-        if bf_matches[i].distance < 0.6 * max_distance:
+        if bf_matches[i].distance < 0.8 * max_distance:
             good_matches.append(bf_matches[i])
-    print(len(good_matches))
+    # print(len(good_matches))
+
     pcount = len(good_matches)
-    if pcount < 100:
-        print("Don't find enough match points")
-    RAN_KP1 = []
-    RAN_KP2 = []
-    for i in range(len(good_matches)):
-        # print(good_matches[i])
-        RAN_KP1.append(kp1[good_matches[i].queryIdx])
-        RAN_KP2.append(kp2[good_matches[i].trainIdx])
+    # if pcount < 100:
+    #     print("Don't find enough match points")
+    return pcount
 
-    p01 = []
-    p02 = []
-    for i in range(len(good_matches)):
-        p01.append(RAN_KP1[i].pt)
-        p02.append(RAN_KP2[i].pt)
-
-    H, RansacStatus = cv2.findFundamentalMat(np.array(p01), np.array(p02), cv2.FM_RANSAC)
-    RR_KP1 = []
-    RR_KP2 = []
-    RR_matches = []
-    index = 0
-    # print(len(RansacStatus))
-    for i in range(len(good_matches)):
-        if RansacStatus[i] != 0:
-            RR_KP1.append(RAN_KP1[i])
-            RR_KP2.append(RAN_KP2[i])
-            good_matches[i].queryIdx = index
-            good_matches[i].trainIdx = index
-            RR_matches.append(good_matches[i])
-            index = index + 1
-
-    print("RANSAC", len(RR_matches))
-
-    img_RR_matches = None
-    img_RR_matches = cv2.drawMatches(drone_img, RR_KP1, satellite_img, RR_KP2, RR_matches, img_RR_matches)
-    cv2.imshow("img", img_RR_matches)
-    cv2.waitKey()
+    # RAN_KP1 = []
+    # RAN_KP2 = []
+    # for i in range(len(good_matches)):
+    #     # print(good_matches[i])
+    #     RAN_KP1.append(kp1[good_matches[i].queryIdx])
+    #     RAN_KP2.append(kp2[good_matches[i].trainIdx])
+    #
+    # p01 = []
+    # p02 = []
+    # for i in range(len(good_matches)):
+    #     p01.append(RAN_KP1[i].pt)
+    #     p02.append(RAN_KP2[i].pt)
+    #
+    # H, RansacStatus = cv2.findFundamentalMat(np.array(p01), np.array(p02), cv2.FM_RANSAC)
+    # RR_KP1 = []
+    # RR_KP2 = []
+    # RR_matches = []
+    # index = 0
+    # # print(len(RansacStatus))
+    # for i in range(len(good_matches)):
+    #     if RansacStatus[i] != 0:
+    #         RR_KP1.append(RAN_KP1[i])
+    #         RR_KP2.append(RAN_KP2[i])
+    #         good_matches[i].queryIdx = index
+    #         good_matches[i].trainIdx = index
+    #         RR_matches.append(good_matches[i])
+    #         index = index + 1
+    #
+    # # print("RANSAC", len(RR_matches))
+    # img_RR_matches = cv2.drawMatches(drone_img, RR_KP1, satellite_img, RR_KP2, RR_matches, None)
+    # cv2.imshow("img", img_RR_matches)
+    # cv2.waitKey()
 
 # cv2.findFundamentalMat()
+if __name__ == '__main__':
+    drone_img = cv2.imread("150-1.jpg")
+    drone_img = cv2.resize(drone_img, [512, 512])
+    satellite_img = cv2.imread("s0.png")
+    # drone_img = cv2.cvtColor(drone_img, cv2.COLOR_BGR2GRAY)
+    # satellite_img = cv2.cvtColor(satellite_img, cv2.COLOR_BGR2GRAY)
 
-drone_img = cv2.imread("150-0.jpg")
-drone_img = cv2.resize(drone_img, [512, 512])
-satellite_img = cv2.imread("s0.png")
-# drone_img = cv2.cvtColor(drone_img, cv2.COLOR_BGR2GRAY)
-# satellite_img = cv2.cvtColor(satellite_img, cv2.COLOR_BGR2GRAY)
-SIFT = cv2.xfeatures2d.SIFT_create()
-
-key1, des1 = SIFT.detectAndCompute(drone_img, None)
-key2, des2 = SIFT.detectAndCompute(satellite_img, None)
-fl_match(key1, des1, key2, des2)
+    ## SIFT
+    # SIFT = cv2.xfeatures2d.SIFT_create()
+    #
+    # key1, des1 = SIFT.detectAndCompute(drone_img, None)
+    # key2, des2 = SIFT.detectAndCompute(satellite_img, None)
+    # fl_match(key1, des1, key2, des2)
+    STAR = cv2.xfeatures2d.StarDetector_create()
+    BRIEF = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+    SIFT = cv2.SIFT_create()
+    kp = SIFT.detect(drone_img,None)
+    print(kp)
+    kp1 = STAR.detect(drone_img, None)
+    kp2 = STAR.detect(satellite_img, None)
+    kp1, des1 = BRIEF.compute(drone_img, kp1)
+    kp2, des2 = BRIEF.compute(satellite_img, kp2)
+    # print(bf_match(kp1, des1, kp2, des2))
+    # print(kp,des)

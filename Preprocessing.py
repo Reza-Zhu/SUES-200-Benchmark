@@ -3,12 +3,6 @@ import os
 from torchvision import datasets, transforms
 from utils import get_yaml_value
 
-train_data_path = "../Datasets/Training/150"
-# satellite_train_data_path = "../Datasets/Training/150/label"
-
-# test_data_path = "../Datasets/Testing/150/"
-# satellite_test_data_path = "../Datasets/Testing/150/label"
-
 Batch_size = get_yaml_value('batch_size')
 height = get_yaml_value("height")
 def Create_Training_Datasets(train_data_path="../Datasets/Training/{}".format(height), batch_size=Batch_size):
