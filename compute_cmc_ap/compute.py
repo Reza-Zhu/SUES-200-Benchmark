@@ -5,6 +5,15 @@ import re
 import numpy as np
 import pandas as pd
 
+def evaluate(number,table):
+    table_numpy = table[number].to_numpy()
+    all_index = np.argsort(table_numpy)
+    all_index = all_index[::-1]
+    index = np.array(table.index)
+    good_index = np.argwhere(index == number)
+    CMC_tmp = compute_mAP(all_index, good_index)
+    return CMC_tmp
+
 def compute_mAP(index, good_index, junk_index = None):
     # CMC就是recall的，只要前K里面有一个正确答案就算recall成功是1否则是0
     # mAP是传统retrieval的指标，算的是 recall和precision曲线，这个曲线和x轴的面积。
@@ -86,19 +95,24 @@ df = df.set_index('index')
 df.columns = query
 # df.to_csv("query_indexed.csv")
 # print(df)
+ap = 0.0
+CMC = np.zeros(len(df.index),dtype=np.float32)
 
-df_numpy = df['0001'].to_numpy()
-# print(df_numpy)
-all_index = np.argsort(df_numpy)
-# print(all_index)
-all_index = all_index[::-1]  # from large to small
-index_numpy = np.array(df.index)
-# print(index_numpy)
-good_index = np.argwhere(index_numpy == '0001')
-print(good_index)
+# CMC_temp = evaluate('0001',df)
+for i in query:
+    ap_tmp, CMC_tmp = evaluate(i, df)
+    if CMC_tmp[0] == -1:
+        continue
+    CMC += CMC_tmp
+    ap += ap_tmp
+print(len(CMC))
 
-ap, cmc = compute_mAP(all_index,good_index)
-print(ap)
-print(cmc)
+CMC = CMC / len(query)
 
 
+result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
+    CMC[0] * 100, CMC[4] * 100, CMC[9] * 100, CMC[round(149 * 0.01)] * 100,
+    ap / len(query) * 100)
+
+print(result)
+# print(CMC, ap)
