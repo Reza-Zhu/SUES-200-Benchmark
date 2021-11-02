@@ -113,59 +113,61 @@ def compute_mAP(index, good_index, junk_index):
 
 
 ############################### main function ###############################
+if __name__ == '__main__':
 
-print("Evaluating Start >>>>>>>>")
+    print("Evaluating Start >>>>>>>>")
 
-if get_yaml_value("query") == "satellite":
-    query_name = 'satellite'
-    gallery_name = 'drone'
-elif get_yaml_value("query") == "drone":
-    query_name = 'drone'
-    gallery_name = 'satellite'
+    if get_yaml_value("query") == "satellite":
+        query_name = 'satellite'
+        gallery_name = 'drone'
+    elif get_yaml_value("query") == "drone":
+        query_name = 'drone'
+        gallery_name = 'satellite'
 
-# load feature data
-result = scipy.io.loadmat("pytorch_result.mat")
+    # load feature data
+    result = scipy.io.loadmat("pytorch_result.mat")
 
-# initialize query feature data
-query_feature = torch.FloatTensor(result['query_f'])
-query_label = result['query_label'][0]
+    # initialize query feature data
+    query_feature = torch.FloatTensor(result['query_f'])
+    query_label = result['query_label'][0]
 
-# initialize all(gallery) feature data
-gallery_feature = torch.FloatTensor(result['gallery_f'])
-gallery_label = result['gallery_label'][0]
+    # initialize all(gallery) feature data
+    gallery_feature = torch.FloatTensor(result['gallery_f'])
+    gallery_label = result['gallery_label'][0]
 
-# print(len(query_label))
-# print(len(gallery_label))
+    # print(len(query_label))
+    # print(len(gallery_label))
 
-# fed tensor to GPU
-query_feature = query_feature.cuda()
-gallery_feature = gallery_feature.cuda()
+    # fed tensor to GPU
+    query_feature = query_feature.cuda()
+    gallery_feature = gallery_feature.cuda()
 
-# CMC = recall
-CMC = torch.IntTensor(len(gallery_label)).zero_()
-# ap = average precision
-ap = 0.0
+    # CMC = recall
+    CMC = torch.IntTensor(len(gallery_label)).zero_()
+    # ap = average precision
+    ap = 0.0
 
-for i in range(len(query_label)):
-    ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label)
-    if CMC_tmp[0] == -1:
-        continue
-    CMC += CMC_tmp
-    ap += ap_tmp
+    for i in range(len(query_label)):
+        ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label)
+        if CMC_tmp[0] == -1:
+            continue
+        CMC += CMC_tmp
+        ap += ap_tmp
 
-# average CMC
-CMC = CMC.float()
-CMC = CMC / len(query_label)
+    # average CMC
 
-# show result and save
-save_path = os.path.join('save_model_weight', get_yaml_value('name'))
-save_txt_path = os.path.join(save_path, '%s_to_%s_result.txt' % (query_name, gallery_name))
-result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
-    CMC[0] * 100, CMC[4] * 100, CMC[9] * 100, CMC[round(len(gallery_label) * 0.01)] * 100,
-    ap / len(query_label) * 100)
-with open(save_txt_path, 'w') as f:
-    f.write(result)
-    f.close()
-shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
-# print(round(len(gallery_label)*0.01))
-print(result)
+    CMC = CMC.float()
+    CMC = CMC / len(query_label)
+
+    # show result and save
+    save_path = os.path.join('save_model_weight', get_yaml_value('name'))
+    save_txt_path = os.path.join(save_path, '%s_to_%s_result.txt' % (query_name, gallery_name))
+    result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
+        CMC[0] * 100, CMC[4] * 100, CMC[9] * 100, CMC[round(len(gallery_label) * 0.01)] * 100,
+        ap / len(query_label) * 100)
+    with open(save_txt_path, 'w') as f:
+        f.write(result)
+        f.close()
+    shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
+    # print(round(len(gallery_label)*0.01))
+    print(result)
