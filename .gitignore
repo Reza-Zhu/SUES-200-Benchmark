@@ -3,3 +3,8 @@
 *.xml
 *.iml
 *.xml
+.idea/deployment.xml
+*.xml
+*.iml
+*.xml
+command.txt
