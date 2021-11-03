@@ -65,7 +65,7 @@ print("Dataloader Preprocessing Finished...")
 
 total = 0
 print("Training Start >>>>>>>>")
-model_save_name = time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())
+weight_save_name = time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())
 for epoch in range(num_epochs):
     running_loss = 0.0
     running_corrects = 0.0
@@ -110,6 +110,6 @@ for epoch in range(num_epochs):
           .format(epoch + 1, num_epochs, "Train", epoch_loss, epoch_acc, epoch_acc2))
     draw_curve(epoch)
     if (epoch + 1) % 5 == 0:
-        save_network(model, model_name, model_save_name, epoch + 1)
+        save_network(model, model_name, weight_save_name, epoch + 1)
 
-os.system("source /home/ubuntu/pytorch/bin/activate && python test.py")
+# os.system("conda activate reza && python test.py")

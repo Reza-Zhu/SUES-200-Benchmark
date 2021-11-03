@@ -68,6 +68,7 @@ def load_network():
     model_name = get_yaml_value("model")
     name = get_yaml_value("name")
     dirname = os.path.join('./save_model_weight', name)
+    print(dirname)
     last_model_name = os.path.basename(get_model_list(dirname, 'net'))
     # print(os.path.join(dirname,last_model_name))
     classes = get_yaml_value("classes")
@@ -86,3 +87,7 @@ def get_id(img_path):
         labels.append(int(folder_name))
         paths.append(path)
     return labels, paths
+
+def create_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)

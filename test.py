@@ -44,52 +44,50 @@ def extract_feature(model, dataloaders, view_index=1):
 
 
 ############################### main function #######################################
+if __name__ == '__main__':
 
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-print("Testing Start >>>>>>>>")
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    print("Testing Start >>>>>>>>")
 
-model = load_network()
-model.classifier.classifier = nn.Sequential()
+    model = load_network()
+    model.classifier.classifier = nn.Sequential()
 
-# 网络模型还需改进
-# print(model)
+    model = model.eval()
+    model = model.cuda()
 
-model = model.eval()
-model = model.cuda()
-
-if get_yaml_value("query") == "satellite":
-    query_name = 'query_satellite'
-    gallery_name = 'gallery_drone'
-elif get_yaml_value("query") == "drone":
-    query_name = 'query_drone'
-    gallery_name = 'gallery_satellite'
+    if get_yaml_value("query") == "satellite":
+        query_name = 'query_satellite'
+        gallery_name = 'gallery_drone'
+    elif get_yaml_value("query") == "drone":
+        query_name = 'query_drone'
+        gallery_name = 'gallery_satellite'
 
 
-which_query = which_view(query_name)
-which_gallery = which_view(gallery_name)
+    which_query = which_view(query_name)
+    which_gallery = which_view(gallery_name)
 
-print('%s -> %s:' % (query_name, gallery_name))
+    print('%s -> %s:' % (query_name, gallery_name))
 
-image_datasets, data_loader = Create_Testing_Datasets()
-# print(image_datasets["query_drone"].imgs)
+    image_datasets, data_loader = Create_Testing_Datasets()
+    # print(image_datasets["query_drone"].imgs)
 
-gallery_path = image_datasets[gallery_name].imgs
-query_path = image_datasets[query_name].imgs
+    gallery_path = image_datasets[gallery_name].imgs
+    query_path = image_datasets[query_name].imgs
 
 
-gallery_label, gallery_path = get_id(gallery_path)
-query_label, query_path = get_id(query_path)
+    gallery_label, gallery_path = get_id(gallery_path)
+    query_label, query_path = get_id(query_path)
 
-with torch.no_grad():
-    query_feature = extract_feature(model, data_loader[query_name], which_query)
-    gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
+    with torch.no_grad():
+        query_feature = extract_feature(model, data_loader[query_name], which_query)
+        gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
 
-    result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label, 'gallery_path': gallery_path,
-              'query_f': query_feature.numpy(), 'query_label': query_label, 'query_path': query_path}
+        result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label, 'gallery_path': gallery_path,
+                  'query_f': query_feature.numpy(), 'query_label': query_label, 'query_path': query_path}
 
-    scipy.io.savemat('pytorch_result.mat', result)
-    # print(result)
-print(">>>>>>>> Testing END")
-os.system("source /home/ubuntu/pytorch/bin/activate && python evaluate.py")
+        scipy.io.savemat('pytorch_result.mat', result)
+        # print(result)
+    print(">>>>>>>> Testing END")
+    # os.system("conda activate reza && python evaluate.py")
 
