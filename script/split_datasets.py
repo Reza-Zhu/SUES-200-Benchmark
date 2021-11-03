@@ -52,10 +52,8 @@ for index_name in video_name:
     train_data_num = int(len(drone_data_list) * SPLIT_VALUE)
     test_data_num = int(len(drone_data_list) * (1 - SPLIT_VALUE))
 
-
     print(train_data_num)
     print(test_data_num)
-
 
     Training_satellite_data_list = satellite_data_list[:train_data_num]
     Training_drone_data_list = drone_data_list[:train_data_num]
