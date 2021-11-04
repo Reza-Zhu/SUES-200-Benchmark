@@ -38,7 +38,7 @@ for num in range(len(query_satellite_list)):
             gallery_img = cv2.resize(gallery_img, [512,512])
             kp2 = Detector.detect(gallery_img, None)
             kp2, des2 = Extractor.compute(gallery_img, kp2)
-            match_points = bf_match(kp1, des1, kp2, des2)
+            match_points = bf_match(kp1, des1, kp2, des2,cv2.NORM_L2)
             sum_match_points = match_points + sum_match_points
             match_dict[satellite_number].append(match_points)
         time_elapsed = time.time() - since
