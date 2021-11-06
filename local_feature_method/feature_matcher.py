@@ -113,10 +113,9 @@ if __name__ == '__main__':
 
     ## SIFT
     # SIFT = cv2.xfeatures2d.SIFT_create()
-    # key1, des1 = SIFT.detectAndCompute(drone_img, None)
-    # key2, des2 = SIFT.detectAndCompute(satellite_img, None)
+    # kp1, des1 = SIFT.detectAndCompute(drone_img, None)
+    # kp2, des2 = SIFT.detectAndCompute(satellite_img, None)
     # count = bf_match(key1, des1, key2, des2, cv2.NORM_L2)
-    # print(count)
 
     ## STAR and BRIEF
     # STAR = cv2.xfeatures2d.StarDetector_create()
@@ -128,36 +127,40 @@ if __name__ == '__main__':
     #
     # kp1, des1 = BRIEF.compute(drone_img, kp1)
     # kp2, des2 = BRIEF.compute(satellite_img, kp2)
-    gray = cv2.cvtColor(drone_img, cv2.COLOR_BGR2GRAY)
-    dst = cv2.cornerHarris(gray, 2, 3, 0.04)
-    print(dst, dst.shape)
-    drone_img[dst > 0.05 * dst.max()] = [0, 0, 255]
-    cv2.imshow('dst', drone_img)
-    cv2.waitKey(0)
 
-
-
+    ## cornerHarris
+    # gray = cv2.cvtColor(drone_img, cv2.COLOR_BGR2GRAY)
+    # dst = cv2.cornerHarris(gray, 2, 3, 0.04)
+    # print(dst, dst.shape)
+    # drone_img[dst > 0.05 * dst.max()] = [0, 0, 255]
+    # cv2.imshow('dst', drone_img)
+    # cv2.waitKey(0)
 
     temp = [kp1[0].pt, kp1[0].size, kp1[0].angle, kp1[0].response, kp1[0].octave,
-            kp1[0].class_id, des1]
+            kp1[0].class_id]
+    print(des1.shape)
 
-    f = open("save.txt", "wb")
-    pickle.dump(temp, f, 0)
-    f.close()
-    f = open("save.txt", "rb")
-    point = pickle.load(f)
-    feature = cv2.KeyPoint(x=point[0][0],y=point[0][1],size=point[1], angle=point[2],
-                            response=point[3], octave=point[4], class_id=point[5])
+
+    ## save object
+
+    # f = open("save.txt", "wb")
+    # pickle.dump(temp, f, 0)
+    # f.close()
+    # f = open("save.txt", "rb")
+    # point = pickle.load(f)
+    # feature = cv2.KeyPoint(x=point[0][0],y=point[0][1],size=point[1], angle=point[2],
+    #                         response=point[3], octave=point[4], class_id=point[5])
 
     # descriptor = point[6]
     # print(kp1[0], des1)
     # print(feature, descriptor)
-    count = bf_match(kp1, des1, kp2, des2,cv2.NORM_HAMMING)
-    print(count)
+
+    # count = bf_match(kp1, des1, kp2, des2,cv2.NORM_HAMMING)
+    # print(count)
 
     # print(temp)
 
-
+    ## H5py
     # f = h5py.File("test.h5", "w")
     # test = f.create_group('test')
     # print(temp)
