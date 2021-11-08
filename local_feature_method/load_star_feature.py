@@ -40,7 +40,7 @@ for height in heights:
             gallery_txt_list = sorted(gallery_txt_list, key=lambda x: int(re.findall("[0-9]+", x[-6:])[0]))
             for txt in gallery_txt_list:
                 kp2, des2 = load_keypoint_descriptor(txt)
-                match_numbers = bf_match(kp1, des1, kp2, des2, cv2.NORM_L2)
+                match_numbers = bf_match(kp1, des1, kp2, des2, cv2.NORM_HAMMING)
                 match_dict[query_number].append(match_numbers)
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(
