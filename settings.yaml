@@ -3,9 +3,10 @@
 batch_size : 8
 model : resnet
 height : 300
-query : drone
+query : satellite
 classes : 89
-num_epochs : 15
+num_epochs : 10
 drop_rate : 0.1
 lr : 0.005
-name: resnet_300_2021-10-26-21:29:18
+name: resnet_300_2021-11-01-14:52:27
+dataset_path: /media/data1/Datasets
