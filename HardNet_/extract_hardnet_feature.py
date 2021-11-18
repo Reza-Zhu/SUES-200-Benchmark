@@ -26,8 +26,9 @@ def extract_sift_keypoints_upright(img, n_feat=5000):
 def extract_descriptors(kpts, img, As, descnet,dev):
     # descnet = descnet.to(dev)
     # descnet.eval()
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     patches = np.array(extract_patches((kpts, As),
-                                       cv2.cvtColor(img, cv2.COLOR_RGB2GRAY),
+                                       img,
                                        32, 12., 'cv2+A')).astype(np.float32)
     bs = 128
     desc = np.zeros((len(patches), 128))
@@ -41,5 +42,6 @@ def extract_descriptors(kpts, img, As, descnet,dev):
 def detect_sift_HardNet(img, kpts, model, dev=torch.device('cuda')):
     hardnet = model
     As = torch.eye(2).view(1, 2, 2).expand(len(kpts), 2, 2).numpy()
-    descs = extract_descriptors(kpts, img, As, hardnet,dev)
+    # print(img)
+    descs = extract_descriptors(kpts, img, As, hardnet, dev)
     return descs
