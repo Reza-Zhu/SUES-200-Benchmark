@@ -11,6 +11,8 @@ def Create_Training_Datasets(train_data_path = data_path+"/Training/{}".format(h
 
     transform_drone_list = [
         transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.RandomCrop((384, 384)),
+        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]
@@ -18,6 +20,8 @@ def Create_Training_Datasets(train_data_path = data_path+"/Training/{}".format(h
 
     transforms_satellite_list = [
         transforms.Resize((384, 384), interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.RandomCrop((384, 384)),
+        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]
