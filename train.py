@@ -45,7 +45,9 @@ def draw_curve(current_epoch):
 
 
 model_name = get_yaml_value("model")
+
 model = model_.model_dict[model_name](classes, drop_rate)
+
 model = model.cuda()
 # print(model)
 
@@ -54,11 +56,12 @@ model = model.cuda()
 
 optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-5, momentum=0.9, nesterov=True)
 criterion = nn.CrossEntropyLoss()
-scheduler = lr_scheduler.MultiStepLR(optimizer, [10, 50], 0.08)
+scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
 x_epoch = []
 fig = plt.figure()
 ax0 = fig.add_subplot(121, title="loss")
 ax1 = fig.add_subplot(122, title="top1err")
+MAX_LOSS = 1
 
 data_loader = Create_Training_Datasets()
 print("Dataloader Preprocessing Finished...")
@@ -100,16 +103,20 @@ for epoch in range(num_epochs):
         running_corrects2 += preds2.eq(label2.data).sum()
 
     epoch_loss = running_loss / classes
-    epoch_acc = running_corrects / total1
-    epoch_acc2 = running_corrects2 / total2
+    drone_acc = running_corrects / total1
+    satellite_acc = running_corrects2 / total2
 
     y_loss['train'].append(epoch_loss)
-    y_err['train'].append(epoch_acc.cpu())
+    y_err['train'].append(drone_acc.cpu())
 
     print('[Epoch {}/{}] {} | Loss: {:.4f} | Drone_Acc: {:.4f} | Satellite_Acc: {:.4f}' \
-          .format(epoch + 1, num_epochs, "Train", epoch_loss, epoch_acc, epoch_acc2))
+          .format(epoch + 1, num_epochs, "Train", epoch_loss, drone_acc, satellite_acc))
     draw_curve(epoch)
-    if (epoch + 1) % 5 == 0:
-        save_network(model, model_name, weight_save_name, epoch + 1)
 
-# os.system("conda activate reza && python test.py")
+    if drone_acc > 0.97 and satellite_acc > 0.97:
+        if epoch_loss < MAX_LOSS:
+            MAX_LOSS = epoch_loss
+            save_network(model, model_name, weight_save_name, epoch + 1)
+            print(model_name + str(epoch + 1) + " has saved loss: " + str(epoch_loss))
+
+os.system("conda activate reza && python test_and_evaluate.py")
