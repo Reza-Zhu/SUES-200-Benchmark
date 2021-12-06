@@ -150,103 +150,118 @@ def extract_feature(model, dataloaders, view_index=1):
 
 
 ############################### main function #######################################
+
+
 if __name__ == '__main__':
 
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
     print("Testing Start >>>>>>>>")
+    # query = get_yaml_value("query")
+    for query in ['drone','satellite']:
+        for seq in range(-5, 0):
+        # query = "satellite"
+        # seq = -1
 
-    model, net_name = load_network(-1)
-    model.classifier.classifier = nn.Sequential()
+            model, net_name = load_network(seq=seq)
+            model.classifier.classifier = nn.Sequential()
 
-    model = model.eval()
-    model = model.cuda()
+            model = model.eval()
+            model = model.cuda()
 
-    if get_yaml_value("query") == "satellite":
-        query_name = 'query_satellite'
-        gallery_name = 'gallery_drone'
-    elif get_yaml_value("query") == "drone":
-        query_name = 'query_drone'
-        gallery_name = 'gallery_satellite'
+            if query == "satellite":
+                query_name = 'query_satellite'
+                gallery_name = 'gallery_drone'
+            elif query == "drone":
+                query_name = 'query_drone'
+                gallery_name = 'gallery_satellite'
 
+            which_query = which_view(query_name)
+            which_gallery = which_view(gallery_name)
 
-    which_query = which_view(query_name)
-    which_gallery = which_view(gallery_name)
+            print('%s -> %s:' % (query_name, gallery_name))
 
-    print('%s -> %s:' % (query_name, gallery_name))
+            image_datasets, data_loader = Create_Testing_Datasets()
+            # print(image_datasets["query_drone"].imgs)
 
-    image_datasets, data_loader = Create_Testing_Datasets()
-    # print(image_datasets["query_drone"].imgs)
+            gallery_path = image_datasets[gallery_name].imgs
+            query_path = image_datasets[query_name].imgs
 
-    gallery_path = image_datasets[gallery_name].imgs
-    query_path = image_datasets[query_name].imgs
+            gallery_label, gallery_path = get_id(gallery_path)
+            query_label, query_path = get_id(query_path)
 
+            with torch.no_grad():
+                query_feature = extract_feature(model, data_loader[query_name], which_query)
+                gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
+                # print(query_feature)
+                # print(gallery_feature)
+                result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label, 'gallery_path': gallery_path,
+                          'query_f': query_feature.numpy(), 'query_label': query_label, 'query_path': query_path}
 
-    gallery_label, gallery_path = get_id(gallery_path)
-    query_label, query_path = get_id(query_path)
+                scipy.io.savemat('pytorch_result.mat', result)
+                # print(result)
+            print(">>>>>>>> Testing END")
+            # os.system("conda activate reza && python evaluate.py")
+            print("Evaluating Start >>>>>>>>")
 
-    with torch.no_grad():
-        query_feature = extract_feature(model, data_loader[query_name], which_query)
-        gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
-        # print(query_feature)
-        # print(gallery_feature)
-        result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label, 'gallery_path': gallery_path,
-                  'query_f': query_feature.numpy(), 'query_label': query_label, 'query_path': query_path}
+            # if get_yaml_value("query") == "satellite":
+            #     query_name = 'satellite'
+            #     gallery_name = 'drone'
+            # elif get_yaml_value("query") == "drone":
+            #     query_name = 'drone'
+            #     gallery_name = 'satellite'
 
-        scipy.io.savemat('pytorch_result.mat', result)
-        # print(result)
-    print(">>>>>>>> Testing END")
-    # os.system("conda activate reza && python evaluate.py")
-    print("Evaluating Start >>>>>>>>")
+            result = scipy.io.loadmat("pytorch_result.mat")
 
-    if get_yaml_value("query") == "satellite":
-        query_name = 'satellite'
-        gallery_name = 'drone'
-    elif get_yaml_value("query") == "drone":
-        query_name = 'drone'
-        gallery_name = 'satellite'
+            # initialize query feature data
+            query_feature = torch.FloatTensor(result['query_f'])
+            query_label = result['query_label'][0]
 
-    result = scipy.io.loadmat("pytorch_result.mat")
+            # initialize all(gallery) feature data
+            gallery_feature = torch.FloatTensor(result['gallery_f'])
+            gallery_label = result['gallery_label'][0]
 
-    # initialize query feature data
-    query_feature = torch.FloatTensor(result['query_f'])
-    query_label = result['query_label'][0]
+            # fed tensor to GPU
+            query_feature = query_feature.cuda()
+            gallery_feature = gallery_feature.cuda()
 
-    # initialize all(gallery) feature data
-    gallery_feature = torch.FloatTensor(result['gallery_f'])
-    gallery_label = result['gallery_label'][0]
+            # CMC = recall
+            CMC = torch.IntTensor(len(gallery_label)).zero_()
+            # ap = average precision
+            ap = 0.0
 
-    # fed tensor to GPU
-    query_feature = query_feature.cuda()
-    gallery_feature = gallery_feature.cuda()
+            for i in range(len(query_label)):
+                ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label)
+                if CMC_tmp[0] == -1:
+                    continue
+                CMC += CMC_tmp
+                ap += ap_tmp
 
-    # CMC = recall
-    CMC = torch.IntTensor(len(gallery_label)).zero_()
-    # ap = average precision
-    ap = 0.0
+            # average CMC
 
-    for i in range(len(query_label)):
-        ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label)
-        if CMC_tmp[0] == -1:
-            continue
-        CMC += CMC_tmp
-        ap += ap_tmp
+            CMC = CMC.float()
+            CMC = CMC / len(query_label)
 
-    # average CMC
+            recall_1 = CMC[0] * 100
+            recall_5 = CMC[4] * 100
+            recall_10 = CMC[9] * 100
+            recall_1p = CMC[round(len(gallery_label) * 0.01)] * 100
+            AP = ap / len(query_label) * 100
 
-    CMC = CMC.float()
-    CMC = CMC / len(query_label)
+            evaluate_result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
+                recall_1, recall_5, recall_10, recall_1p, AP)
 
-    # show result and save
-    save_path = os.path.join('save_model_weight', get_yaml_value('name'))
-    save_txt_path = os.path.join(save_path, '%s_to_%s_%s_result.txt' % (query_name, gallery_name, net_name[:7]))
-    evaluate_result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
-        CMC[0] * 100, CMC[4] * 100, CMC[9] * 100, CMC[round(len(gallery_label) * 0.01)] * 100,
-        ap / len(query_label) * 100)
-    with open(save_txt_path, 'w') as f:
-        f.write(evaluate_result)
-        f.close()
+            # show result and save
+            save_path = os.path.join('save_model_weight', get_yaml_value('name'))
+            save_txt_path = os.path.join(save_path,
+                                         '%s_to_%s_%s_%.2f_%.2f.txt' % (query_name[6:], gallery_name[8:], net_name[:7],
+                                                                        recall_1, AP))
+            print(save_txt_path)
 
-    shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
-    # print(round(len(gallery_label)*0.01))
-    print(evaluate_result)
+            with open(save_txt_path, 'w') as f:
+                f.write(evaluate_result)
+                f.close()
+
+            shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
+            # print(round(len(gallery_label)*0.01))
+            print(evaluate_result)
