@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn import init
 from torchvision import models
-from efficientnet.model import EfficientNet
+from efficientnet.model_ import EfficientNet
+from Inceptionv4.Inceptionv4 import inceptionv4
+from senet.se_resnet import se_resnet50
+from senet.cbam_resnet import resnet50_cbam
 
 class ClassBlock(nn.Module):
     def __init__(self, input_dim, class_num, drop_rate, num_bottleneck=512):
@@ -60,23 +64,16 @@ class ResNet(nn.Module):
         self.classifier = ClassBlock(2048, class_num, drop_rate)
 
     def forward(self, x1, x2):
-        # print(self.lcm_model)
-        # print(self.classifier)
-
         if x1 is None:
             y1 = None
         else:
-            # print(x1.size())
             x1 = self.model_1(x1)
-            # print(x1.size())
             y1 = self.classifier(x1)
 
         if x2 is None:
             y2 = None
         else:
-            # print(x2.size())
             x2 = self.model_2(x2)
-            # print(x2.size())
             y2 = self.classifier(x2)
 
         return y1, y2
@@ -86,7 +83,7 @@ class VGG_base(nn.Module):
     def __init__(self):
         super(VGG_base, self).__init__()
         vgg_model = models.vgg16_bn(pretrained=True)
-        vgg_model.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
+        vgg_model.avgpool2 = nn.AdaptiveAvgPool2d((7, 7))
         self.model = vgg_model
 
     def forward(self, x):
@@ -125,12 +122,12 @@ class DenseNet_base(nn.Module):
     def __init__(self):
         super(DenseNet_base, self).__init__()
         dense_model = models.densenet121(pretrained=True)
-        dense_model.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
         self.model = dense_model
 
     def forward(self, x):
         x = self.model.features(x)
-        x = self.model.avgpool2(x)
+        x = F.relu(x, inplace=True)
+        x = F.adaptive_avg_pool2d(x, (1, 1))
         x = x.view(x.size(0), x.size(1))
         return x
 
@@ -161,13 +158,11 @@ class DenseNet(nn.Module):
 class EfficientNet_base(nn.Module):
     def __init__(self):
         super(EfficientNet_base, self).__init__()
-        efficient_net = EfficientNet.from_pretrained('efficientnet-b4')
-        # efficient_net.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
+        efficient_net = EfficientNet.from_pretrained('efficientnet-b1')
         self.model = efficient_net
 
     def forward(self, x):
         x = self.model(x)
-        # x = self.model.avgpool2(x)
         x = x.view(x.size(0), x.size(1))
         return x
 
@@ -177,7 +172,7 @@ class Efficient_Net(nn.Module):
         super(Efficient_Net, self).__init__()
         self.model_1 = EfficientNet_base()
         self.model_2 = EfficientNet_base()
-        self.classifier = ClassBlock(1792,classes,drop_rate)
+        self.classifier = ClassBlock(1280, classes, drop_rate)
 
     def forward(self, x1, x2):
         if x1 is None:
@@ -185,7 +180,7 @@ class Efficient_Net(nn.Module):
         else:
             # print(x1.size())
             x1 = self.model_1(x1)
-            print(x1.size())
+            # print(x1.size())
             y1 = self.classifier(x1)
 
         if x2 is None:
@@ -197,6 +192,143 @@ class Efficient_Net(nn.Module):
             y2 = self.classifier(x2)
         return y1, y2
 
+class Inceptionv4_base(nn.Module):
+    def __init__(self):
+        super(Inceptionv4_base, self).__init__()
+        inception_net = inceptionv4(pretrained=True)
+        self.model = inception_net
+
+    def forward(self, x):
+        x = self.model.features(x)
+        x = x.view(x.size(0), x.size(1))
+        return x
+
+class Inceptionv4(nn.Module):
+    def __init__(self, classes, drop_rate):
+        super(Inceptionv4, self).__init__()
+        self.model_1 = Inceptionv4_base()
+        self.model_2 = Inceptionv4_base()
+        self.classifier = ClassBlock(1536, classes, drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            # print(x1.size())
+            x1 = self.model_1(x1)
+            # print(x1.size())
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            # print(x2.size())
+            x2 = self.model_2(x2)
+            # print(x2.size())
+            y2 = self.classifier(x2)
+        return y1, y2
+
+
+class seresnet_50_base(nn.Module):
+    def __init__(self):
+        super(seresnet_50_base, self).__init__()
+        se_resnet50_model = se_resnet50(pretrained=True)
+        se_resnet50_model.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
+        self.model = se_resnet50_model
+
+    def forward(self, x):
+        x = self.model.conv(x)
+        x = self.model.bn1(x)
+        x = self.model.relu(x)
+        x = self.model.maxpool(x)
+
+        x = self.model.layer1(x)
+        x = self.model.layer2(x)
+        x = self.model.layer3(x)
+        x = self.model.layer4(x)
+        x = self.model.avgpool(x)
+
+        x = self.model.avgpool2(x)
+
+        x = x.view(x.size(0), x.size(1))
+        return x
+
+
+class seresnet_50(nn.Module):
+    def __init__(self, classes, drop_rate):
+        super(seresnet_50, self).__init__()
+        self.model_1 = seresnet_50_base()
+        self.model_2 = seresnet_50_base()
+        self.classifier = ClassBlock(2048, classes, drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            # print(x1.size())
+            x1 = self.model_1(x1)
+            # print(x1.size())
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            # print(x2.size())
+            x2 = self.model_2(x2)
+            # print(x2.size())
+            y2 = self.classifier(x2)
+        return y1, y2
+
+
+class cbam_resnet50_base(nn.Module):
+    def __init__(self):
+        super(cbam_resnet50_base, self).__init__()
+        cbam_resnet50_model = resnet50_cbam(True)
+        cbam_resnet50_model.avgpool2 = nn.AdaptiveAvgPool2d((1, 1))
+        self.model = cbam_resnet50_model
+
+    def forward(self, x):
+        x = self.model.conv(x)
+        x = self.model.bn1(x)
+        x = self.model.relu(x)
+        x = self.model.maxpool(x)
+
+        x = self.model.layer1(x)
+        x = self.model.layer2(x)
+        x = self.model.layer3(x)
+        x = self.model.layer4(x)
+        x = self.model.avgpool(x)
+
+        x = self.model.avgpool2(x)
+
+        x = x.view(x.size(0), x.size(1))
+        return x
+
+
+class cbam_resnet_50(nn.Module):
+    def __init__(self, classes, drop_rate):
+        super(cbam_resnet_50, self).__init__()
+        self.model_1 = cbam_resnet50_base()
+        self.model_2 = cbam_resnet50_base()
+        self.classifier = ClassBlock(2048, classes, drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            # print(x1.size())
+            x1 = self.model_1(x1)
+            # print(x1.size())
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            # print(x2.size())
+            x2 = self.model_2(x2)
+            # print(x2.size())
+            y2 = self.classifier(x2)
+        return y1, y2
 
 
 def weights_init_kaiming(m):
@@ -218,11 +350,12 @@ def weights_init_classifier(m):
         init.normal_(m.weight.data, std=0.001)
         init.constant_(m.bias.data, 0.0)
 
+
 if __name__ == '__main__':
     # import ssl
 
     # ssl._create_default_https_context = ssl._create_unverified_context
-    model = Efficient_Net(100,0.1)
+    model = Efficient_Net(100, 0.1)
     # model = EfficientNet_b()
     print(model)
     # print(model.extract_features)
@@ -235,7 +368,10 @@ if __name__ == '__main__':
 
 model_dict = {
     "resnet": ResNet,
+    "se_resnet": seresnet_50,
+    "cbam_resnet": cbam_resnet_50,
     "vgg": VGG,
     "dense": DenseNet,
     "efficient": Efficient_Net,
+    "inception": Inceptionv4,
 }
