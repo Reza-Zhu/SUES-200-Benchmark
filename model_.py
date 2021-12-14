@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.nn import init
 from torchvision import models
 from efficientnet.model_ import EfficientNet
-from Inceptionv4.Inceptionv4 import inceptionv4
+from Incept.InceptV4 import inceptionv4
 from senet.se_resnet import se_resnet50
 from senet.cbam_resnet import resnet50_cbam
 
@@ -195,7 +195,7 @@ class Efficient_Net(nn.Module):
 class Inceptionv4_base(nn.Module):
     def __init__(self):
         super(Inceptionv4_base, self).__init__()
-        inception_net = inceptionv4(pretrained=True)
+        inception_net = inceptionv4(pretrained=False)
         self.model = inception_net
 
     def forward(self, x):
@@ -237,7 +237,7 @@ class seresnet_50_base(nn.Module):
         self.model = se_resnet50_model
 
     def forward(self, x):
-        x = self.model.conv(x)
+        x = self.model.conv1(x)
         x = self.model.bn1(x)
         x = self.model.relu(x)
         x = self.model.maxpool(x)
