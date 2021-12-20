@@ -249,9 +249,7 @@ def query(image, k, descriptorName, visualDictionary, tree):
     kp, descriptor = funDescriptor(im)
     # compute VLAD
     v = VLAD(descriptor, visualDictionary)
-    print(v.shape)
-    v = v.reshape(1,-1)
-    print(v.shape)
+    v = v.reshape(1, -1)
     # find the k most relevant images
     dist, ind = tree.query(v, k)
 

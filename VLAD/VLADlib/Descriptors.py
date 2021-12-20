@@ -17,8 +17,11 @@ def describeSURF( image):
 def describeSIFT(image):
     image = cv2.resize(image, [512, 512])
     image = cv2.GaussianBlur(image, ksize=(3, 3), sigmaX=0.5)
-    sift = cv2.xfeatures2d.SIFT_create(500)
+    sift = cv2.xfeatures2d.SIFT_create(1000)
     kp, des = sift.detectAndCompute(image, None)
+
+    des /= (des.sum(axis=1, keepdims=True) + 1e-7)
+    des = np.sqrt(des)
     #draw keypoints
     #import matplotlib.pyplot as plt		
     #img2 = cv2.drawKeypoints(img,kp,None,(255,0,0),4)

@@ -28,16 +28,13 @@ def get_visualBook(data_path, K, save_path):
         pickle.dump(visualDictionary, f)
 
 
-for Height in [300]:
+for Height in [150, 200, 250, 300]:
     # Height = 150
-    K = 128
+    K = 149-60
     satellite_data_path = '/media/data1/Datasets/Training/' + str(Height) + '/satellite'
     drone_data_path = '/media/data1/Datasets/Training/' + str(Height) + '/drone'
     satellite_save_path = "./Data/satellite_%s_visualDictionary" % str(Height) + ".pickle"
     drone_save_path = "./Data/drone_%s_visualDictionary" % str(Height) + ".pickle"
 
-    # if Height == 250:
     get_visualBook(drone_data_path, K, drone_save_path)
-    # else:
-    #     get_visualBook(drone_data_path, K, drone_save_path)
-    #     get_visualBook(satellite_data_path, K, satellite_save_path)
+    get_visualBook(satellite_data_path, K, satellite_save_path)

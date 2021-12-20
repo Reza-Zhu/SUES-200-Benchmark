@@ -24,13 +24,13 @@ def build_ball_tree(gallery_filepath):
         pickle.dump([imageID, tree, pathImageData], f, pickle.HIGHEST_PROTOCOL)
 
 
-Leaf_Size = 40
+if __name__ == '__main__':
+    Leaf_Size = 40
+    for Height in [150, 200, 250, 300]:
 
-for Height in [150, 200, 250, 300]:
+        gallery_satellite_path = "./Data/gallery_satellite_%s_VLADDictionary" % str(Height) + ".pickle"
+        gallery_drone_path = "./Data/gallery_drone_%s_VLADDictionary" % str(Height) + ".pickle"
 
-    gallery_satellite_path = "./Data/gallery_satellite_%s_VLADDictionary" % str(Height) + ".pickle"
-    gallery_drone_path = "./Data/gallery_drone_%s_VLADDictionary" % str(Height) + ".pickle"
-
-    build_ball_tree(gallery_satellite_path)
-    build_ball_tree(gallery_drone_path)
-    break
+        build_ball_tree(gallery_satellite_path)
+        build_ball_tree(gallery_drone_path)
+        # break

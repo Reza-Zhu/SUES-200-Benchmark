@@ -56,8 +56,8 @@ print(pathImageData)
 #computing descriptors
 dist, ind = query(path, k, descriptorName, visualDictionary, tree)
 
-print(dist)
-print(ind)
+print(dist.shape)
+print(ind.shape)
 ind = list(itertools.chain.from_iterable(ind))
 
 print(path)
