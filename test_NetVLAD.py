@@ -1,10 +1,11 @@
 import os
 import torch
+import shutil
 import numpy as np
 from utils import get_yaml_value, get_id, get_model_list
-from evaluate import compute_mAP, evaluate
+from evaluate import evaluate
 from Preprocessing import Create_Testing_Datasets
-from torchvision import models, datasets, transforms
+from torchvision import models
 from NetVLAD.netvlad import NetVLAD, EmbedNet
 
 
@@ -87,6 +88,11 @@ result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top10:%.2f AP:%.2f' 
 save_path = os.path.join('save_model_weight', get_yaml_value('name'))
 save_txt_path = os.path.join(save_path,
                              '%s_to_%s_%s_%.2f_%.2f.txt' % (query_name[6:], gallery_name[8:], last_model_name[:7],
-                                                            CMC[0] * 100, ap / len(query_label)))
+                                                            CMC[0] * 100, ap / len(query_label)*100))
 
+with open(save_txt_path, "w") as f:
+    f.write(result)
+    f.close()
+
+shutil.copy("settings.yaml", os.path.join(save_path, "settings_saved.yaml"))
 print(result)
