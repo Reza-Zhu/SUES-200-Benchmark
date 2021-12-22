@@ -1,1 +1,0 @@
-Recall@1:0.00 Recall@5:10.00 Recall@10:10.00 Recall@top1:5.00 AP:1.40
