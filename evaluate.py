@@ -26,7 +26,6 @@ def evaluate(qf, ql, gf, gl):
     # score.shape = （51355,)
     score = score.numpy()
     # print(score)
-    # print(score.shape)
 
     # predict index
     index = np.argsort(score)  # from small to large
@@ -39,13 +38,13 @@ def evaluate(qf, ql, gf, gl):
     # index = index[0:2000]
     # good index
     query_index = np.argwhere(gl == ql)
+
     # print(query_index.shape) (54, 1)
     # gl = ql 返回标签值相同的索引矩阵
     # 得到 ql：卫星图标签，gl：无人机图标签
     # 即 卫星图标签在 gl中的索引位置 组成的矩阵
     good_index = query_index
 
-    # print(good_index)
     # print(index[0:10])
     junk_index = np.argwhere(gl == -1)
     # print(junk_index)  = []
@@ -168,6 +167,8 @@ if __name__ == '__main__':
     with open(save_txt_path, 'w') as f:
         f.write(result)
         f.close()
+
+
     shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
     # print(round(len(gallery_label)*0.01))
     print(result)

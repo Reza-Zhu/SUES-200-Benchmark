@@ -26,21 +26,21 @@ height = get_yaml_value("height")
 classes = get_yaml_value("classes")
 model_name = get_yaml_value("model")
 
-# lr = get_yaml_value("lr")
+lr = get_yaml_value("lr")
 
 dim = list(base_model.parameters())[-1].shape[0]
 netVLAD = NetVLAD(num_clusters=classes, dim=dim, alpha=1.0)
 model = EmbedNet(base_model, netVLAD).cuda()
 
 criterion = HardTripletLoss(margin=0.1).cuda()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.05, weight_decay=1e-5, momentum=0.9, nesterov=True)
-scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
+optimizer = torch.optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9, nesterov=True)
+# scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
 
 data_loader = Create_Training_Datasets()
 print("<<<<<<<<<Training Start>>>>>>>>>>>>")
 current_time = time.strftime("%Y-%m-%d-%H:%M:%S", time.localtime())
 
-min_loss = 0.0020
+min_loss = 0.005
 for epoch in range(num_epochs):
     running_loss = 0.0
     total = 0.0
@@ -58,7 +58,7 @@ for epoch in range(num_epochs):
 
         # print('[ In Epoch {}-{}] {} | Loss: {:.8f} | '\
         #       .format(epoch + 1, batch_dix, "Train", loss.item()))
-    scheduler.step()
+    # scheduler.step()
     epoch_loss = running_loss/total
     print('<<<<[Epoch {}/{}] {} | Loss: {:.8f} |>>>>'\
           .format(epoch + 1, num_epochs, "Train", epoch_loss))

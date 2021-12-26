@@ -160,8 +160,6 @@ if __name__ == '__main__':
     # query = get_yaml_value("query")
     for query in ['drone','satellite']:
         for seq in range(-5, 0):
-        # query = "satellite"
-        # seq = -1
 
             model, net_name = load_network(seq=seq)
             model.classifier.classifier = nn.Sequential()
@@ -241,7 +239,7 @@ if __name__ == '__main__':
 
             CMC = CMC.float()
             CMC = CMC / len(query_label)
-
+            # print(len(query_label))
             recall_1 = CMC[0] * 100
             recall_5 = CMC[4] * 100
             recall_10 = CMC[9] * 100

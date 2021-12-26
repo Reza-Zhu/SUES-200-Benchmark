@@ -23,7 +23,7 @@ def extract_feature(model, dataloaders, view_index=1):
         for i in range(2):
             if i == 1:
                 img = fliplr(img)
-
+            outputs = None
             input_img = img.to(device)
             if view_index == 1:
                 outputs, _ = model(input_img, None)
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         device = torch.device("cuda:0")
     print("Testing Start >>>>>>>>")
 
-    model = load_network()
+    model, _ = load_network(-2)
     model.classifier.classifier = nn.Sequential()
 
     model = model.eval()
@@ -75,19 +75,17 @@ if __name__ == '__main__':
     gallery_path = image_datasets[gallery_name].imgs
     query_path = image_datasets[query_name].imgs
 
-
     gallery_label, gallery_path = get_id(gallery_path)
     query_label, query_path = get_id(query_path)
 
     with torch.no_grad():
         query_feature = extract_feature(model, data_loader[query_name], which_query)
         gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
-
         result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label, 'gallery_path': gallery_path,
                   'query_f': query_feature.numpy(), 'query_label': query_label, 'query_path': query_path}
 
         scipy.io.savemat('pytorch_result.mat', result)
         # print(result)
     print(">>>>>>>> Testing END")
-    # os.system("conda activate reza && python evaluate.py")
+    os.system("conda activate reza && python evaluate.py")
 

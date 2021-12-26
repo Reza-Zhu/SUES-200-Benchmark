@@ -56,7 +56,8 @@ model = model.cuda()
 
 optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-5, momentum=0.9, nesterov=True)
 criterion = nn.CrossEntropyLoss()
-scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
+# scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
+scheduler = lr_scheduler.MultiStepLR(optimizer, [10, 30], gamma=0.1)
 x_epoch = []
 fig = plt.figure()
 ax0 = fig.add_subplot(121, title="loss")
@@ -73,7 +74,6 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     running_corrects = 0.0
     running_corrects2 = 0.0
-    running_corrects3 = 0.0
     total1 = 0.0
     total2 = 0.0
     model.train(True)
@@ -117,6 +117,6 @@ for epoch in range(num_epochs):
         if epoch_loss < MAX_LOSS:
             MAX_LOSS = epoch_loss
             save_network(model, model_name, weight_save_name, epoch + 1)
-            print(model_name + str(epoch + 1) + " has saved loss: " + str(epoch_loss))
+            print(model_name + " Epoch: " + str(epoch + 1) + " has saved with loss: " + str(epoch_loss))
 
-os.system("conda activate reza && python test_and_evaluate.py")
+# os.system("conda activate reza && python test_and_evaluate.py")
