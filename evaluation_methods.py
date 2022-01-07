@@ -34,6 +34,10 @@ def evaluate_adaption_rate(model_name):
     return evaluate_satellite_height/evaluate_drone_height
 
 
+def evaluate_stability(model_name):
+    csv_path = "./save_model_weight"
+    model_csv_list = glob.glob(os.path.join(csv_path, model_name + "*.csv"))
+
 if __name__ == '__main__':
     adaption = evaluate_adaption_rate("resnet")
     print(adaption)
