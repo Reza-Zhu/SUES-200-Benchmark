@@ -53,8 +53,16 @@ model = model.cuda()
 
 # ignored_params = list(map(id, model.classifier.parameters()))
 # base_params = filter(lambda p: id(p) not in ignored_params, model.parameters())
+ignored_params = list(map(id, model.classifier.parameters() ))
+base_params = filter(lambda p: id(p) not in ignored_params, model.parameters())
 
-optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-5, momentum=0.9, nesterov=True)
+
+optimizer = optim.SGD([
+             {'params': base_params, 'lr': 0.1*lr},
+             {'params': model.classifier.parameters(), 'lr': lr}
+         ], weight_decay=5e-4, momentum=0.9, nesterov=True)
+
+# optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-5, momentum=0.9, nesterov=True)
 criterion = nn.CrossEntropyLoss()
 # scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
 scheduler = lr_scheduler.MultiStepLR(optimizer, [10, 30], gamma=0.1)
