@@ -4,6 +4,7 @@ import torch
 import scipy.io
 import shutil
 import numpy as np
+import pandas as pd
 from torch import nn
 from utils import fliplr, load_network, which_view, get_id, get_yaml_value
 from Preprocessing import Create_Testing_Datasets
@@ -131,6 +132,7 @@ def extract_feature(model, dataloaders, view_index=1):
                 img = fliplr(img)
 
             input_img = img.to(device)
+            outputs = None
             if view_index == 1:
                 outputs, _ = model(input_img, None)
             elif view_index == 2:
@@ -158,7 +160,15 @@ if __name__ == '__main__':
         device = torch.device("cuda:0")
     print("Testing Start >>>>>>>>")
     # query = get_yaml_value("query")
-    for query in ['drone','satellite']:
+    table_path = os.path.join("save_model_weight",
+                              get_yaml_value("name") + ".csv")
+
+    if not os.path.exists(table_path):
+        evaluate_csv = pd.DataFrame(index=["recall@1", "recall@5", "recall@10", "recall@1p", "AP"])
+    else:
+        evaluate_csv = pd.read_csv(table_path + ".csv")
+
+    for query in ['drone', 'satellite']:
         for seq in range(-5, 0):
 
             model, net_name = load_network(seq=seq)
@@ -166,6 +176,9 @@ if __name__ == '__main__':
 
             model = model.eval()
             model = model.cuda()
+
+            query_name = ""
+            gallery_name = ""
 
             if query == "satellite":
                 query_name = 'query_satellite'
@@ -191,15 +204,15 @@ if __name__ == '__main__':
             with torch.no_grad():
                 query_feature = extract_feature(model, data_loader[query_name], which_query)
                 gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
-                # print(query_feature)
-                # print(gallery_feature)
-                result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label, 'gallery_path': gallery_path,
+
+                result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label,
+                          'gallery_path': gallery_path,
                           'query_f': query_feature.numpy(), 'query_label': query_label, 'query_path': query_path}
 
                 scipy.io.savemat('pytorch_result.mat', result)
-                # print(result)
+
             print(">>>>>>>> Testing END")
-            # os.system("conda activate reza && python evaluate.py")
+
             print("Evaluating Start >>>>>>>>")
 
             # if get_yaml_value("query") == "satellite":
@@ -246,6 +259,8 @@ if __name__ == '__main__':
             recall_1p = CMC[round(len(gallery_label) * 0.01)] * 100
             AP = ap / len(query_label) * 100
 
+            evaluate_csv[query_name+"_"+net_name] = [float(recall_1), float(recall_5),
+                                                     float(recall_10), float(recall_1p), float(AP)]
             evaluate_result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
                 recall_1, recall_5, recall_10, recall_1p, AP)
 
@@ -263,3 +278,6 @@ if __name__ == '__main__':
             shutil.copy('settings.yaml', os.path.join(save_path, "settings_saved.yaml"))
             # print(round(len(gallery_label)*0.01))
             print(evaluate_result)
+    evaluate_csv.columns.name = "net"
+    evaluate_csv.index.name = "index"
+    evaluate_csv.to_csv(table_path)
