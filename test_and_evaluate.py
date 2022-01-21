@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import time
 import torch
 import scipy.io
 import shutil
@@ -166,7 +167,8 @@ if __name__ == '__main__':
     if not os.path.exists(table_path):
         evaluate_csv = pd.DataFrame(index=["recall@1", "recall@5", "recall@10", "recall@1p", "AP"])
     else:
-        evaluate_csv = pd.read_csv(table_path + ".csv")
+        evaluate_csv = pd.read_csv(table_path)
+        evaluate_csv.index = evaluate_csv["index"]
 
     for query in ['drone', 'satellite']:
         for seq in range(-5, 0):
@@ -202,8 +204,12 @@ if __name__ == '__main__':
             query_label, query_path = get_id(query_path)
 
             with torch.no_grad():
+                since = time.time()
                 query_feature = extract_feature(model, data_loader[query_name], which_query)
                 gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
+                time_elapsed = time.time() - since
+                print('Testing complete in {:.0f}m {:.0f}s'.format(
+                    time_elapsed // 60, time_elapsed % 60))
 
                 result = {'gallery_f': gallery_feature.numpy(), 'gallery_label': gallery_label,
                           'gallery_path': gallery_path,
@@ -261,8 +267,8 @@ if __name__ == '__main__':
 
             evaluate_csv[query_name+"_"+net_name] = [float(recall_1), float(recall_5),
                                                      float(recall_10), float(recall_1p), float(AP)]
-            evaluate_result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f' % (
-                recall_1, recall_5, recall_10, recall_1p, AP)
+            evaluate_result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top1:%.2f AP:%.2f Time:%.2f' % (
+                recall_1, recall_5, recall_10, recall_1p, AP, time_elapsed)
 
             # show result and save
             save_path = os.path.join('save_model_weight', get_yaml_value('name'))
