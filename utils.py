@@ -13,23 +13,22 @@ def get_yaml_value(key_name, file_name="settings.yaml"):
     return params
 
 
-def save_network(network, model_name, dir_name, epoch_label):
-    height = get_yaml_value('height')
-    dir_name = model_name + "_" + str(height) + "_" + dir_name
-    with open("settings.yaml", "r", encoding="utf-8") as f:
-        dict = yaml.load(f, Loader=yaml.FullLoader)
-        dict['name'] = dir_name
-        with open("settings.yaml", "w", encoding="utf-8") as f:
-            yaml.dump(dict, f)
+def save_network(network, dir_model_name, epoch_label):
+    save_path = get_yaml_value('weight_save_path')
+    # with open("settings.yaml", "r", encoding="utf-8") as f:
+    #     dict = yaml.load(f, Loader=yaml.FullLoader)
+    #     dict['name'] = dir_model_name
+    #     with open("settings.yaml", "w", encoding="utf-8") as f:
+    #         yaml.dump(dict, f)
 
-    if not os.path.isdir('./save_model_weight/' + dir_name):
-        os.mkdir('./save_model_weight/' + dir_name)
+    # if not os.path.isdir(os.path.join(save_path, dir_model_name)):
+    #     os.mkdir(os.path.join(save_path, dir_model_name))
 
     if isinstance(epoch_label, int):
         save_filename = 'net_%03d.pth' % epoch_label
     else:
         save_filename = 'net_%s.pth' % epoch_label
-    save_path = os.path.join('./save_model_weight', dir_name, save_filename)
+    save_path = os.path.join(save_path, dir_model_name, save_filename)
     torch.save(network.state_dict(), save_path)
 
 
@@ -66,9 +65,10 @@ def get_model_list(dirname, key, seq):
 def load_network(seq):
     model_name = get_yaml_value("model")
     name = get_yaml_value("name")
-    dirname = os.path.join('./save_model_weight', name)
+    weight_save_path = get_yaml_value("weight_save_path")
+    dirname = os.path.join(weight_save_path, name)
     last_model_name = os.path.basename(get_model_list(dirname, 'net', seq))
-    print(last_model_name)
+    print(get_model_list(dirname, 'net', seq) + " " + "seq: " + str(seq))
     # print(os.path.join(dirname,last_model_name))
     classes = get_yaml_value("classes")
     drop_rate = get_yaml_value("drop_rate")
@@ -92,3 +92,13 @@ def get_id(img_path):
 def create_dir(path):
     if not os.path.exists(path):
         os.mkdir(path)
+
+
+def parameter(index_name, index_number):
+    with open("settings.yaml", "r", encoding="utf-8") as f:
+        setting_dict = yaml.load(f, Loader=yaml.FullLoader)
+        setting_dict[index_name] = index_number
+        f.close()
+        with open("settings.yaml", "w", encoding="utf-8") as f:
+            yaml.dump(setting_dict, f)
+            f.close()

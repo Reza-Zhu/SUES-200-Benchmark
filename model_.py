@@ -15,7 +15,6 @@ class ClassBlock(nn.Module):
         add_block = nn.Sequential(*add_block)
         add_block.apply(weights_init_kaiming)
 
-
         classifier = []
         classifier += [nn.Linear(num_bottleneck, class_num)]
         classifier = nn.Sequential(*classifier)
@@ -31,10 +30,15 @@ class ClassBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, class_num, drop_rate):
+    def __init__(self, class_num, drop_rate, share_weight=False):
         super(ResNet, self).__init__()
         self.model_1 = timm.create_model("resnet50", pretrained=True, num_classes=0)
-        self.model_2 = timm.create_model("resnet50", pretrained=True, num_classes=0)
+
+        if share_weight:
+            self.model_2 = self.model_1
+        else:
+            self.model_2 = timm.create_model("resnet50", pretrained=True, num_classes=0)
+
         self.classifier = ClassBlock(2048, class_num, drop_rate)
 
     def forward(self, x1, x2):
@@ -105,7 +109,7 @@ class cbam_resnet50_base(nn.Module):
         self.model = cbam_resnet50_model
 
     def forward(self, x):
-        x = self.model.conv(x)
+        x = self.model.conv1(x)
         x = self.model.bn1(x)
         x = self.model.relu(x)
         x = self.model.maxpool(x)
@@ -170,9 +174,9 @@ class VGG(nn.Module):
 class DenseNet(nn.Module):
     def __init__(self, class_num, drop_rate):
         super(DenseNet, self).__init__()
-        self.model_1 = timm.create_model("densenet121", pretrained=True, num_classes=0)
-        self.model_2 = timm.create_model("densenet121", pretrained=True, num_classes=0)
-        self.classifier = ClassBlock(1024, class_num, drop_rate)
+        self.model_1 = timm.create_model("densenet169", pretrained=True, num_classes=0)
+        self.model_2 = timm.create_model("densenet169", pretrained=True, num_classes=0)
+        self.classifier = ClassBlock(1664, class_num, drop_rate)
 
     def forward(self, x1, x2):
         if x1 is None:
@@ -189,11 +193,33 @@ class DenseNet(nn.Module):
         return y1, y2
 
 
-class Efficient_Net(nn.Module):
+class EfficientV1(nn.Module):
     def __init__(self, classes, drop_rate):
-        super(Efficient_Net, self).__init__()
+        super(EfficientV1, self).__init__()
         self.model_1 = timm.create_model("efficientnet_b1", pretrained=True, num_classes=0)
         self.model_2 = timm.create_model("efficientnet_b1", pretrained=True, num_classes=0)
+        self.classifier = ClassBlock(1280, classes, drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            x1 = self.model_1(x1)
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            x2 = self.model_2(x2)
+            y2 = self.classifier(x2)
+        return y1, y2
+
+
+class EfficientV2(nn.Module):
+    def __init__(self, classes, drop_rate):
+        super(EfficientV2, self).__init__()
+        self.model_1 = timm.create_model("efficientnetv2_s", num_classes=0)
+        self.model_2 = timm.create_model("efficientnetv2_s", num_classes=0)
         self.classifier = ClassBlock(1280, classes, drop_rate)
 
     def forward(self, x1, x2):
@@ -232,6 +258,26 @@ class Inceptionv4(nn.Module):
             y2 = self.classifier(x2)
         return y1, y2
 
+class ViT(nn.Module):
+    def __init__(self, classes, drop_rate):
+        super(ViT, self).__init__()
+        self.model_1 = timm.create_model("vit_base_patch16_384", pretrained=True, num_classes=0)
+        self.model_2 = timm.create_model("vit_base_patch16_384", pretrained=True, num_classes=0)
+        self.classifier = ClassBlock(768, classes, drop_rate)
+
+    def forward(self, x1, x2):
+        if x1 is None:
+            y1 = None
+        else:
+            x1 = self.model_1(x1)
+            y1 = self.classifier(x1)
+
+        if x2 is None:
+            y2 = None
+        else:
+            x2 = self.model_2(x2)
+            y2 = self.classifier(x2)
+        return y1, y2
 
 def weights_init_kaiming(m):
     classname = m.__class__.__name__
@@ -257,24 +303,26 @@ if __name__ == '__main__':
     # import ssl
 
     # ssl._create_default_https_context = ssl._create_unverified_context
-    model = Efficient_Net(100, 0.1)
+    model = ViT(100, 0.1).cuda()
     # model = EfficientNet_b()
-    print(model)
+    print(model.device)
     # print(model.extract_features)
     # Here I left a simple forward function.
     # Test the model, before you train it.
-    input = torch.randn(16, 3, 384, 384)
+    input = torch.randn(16, 3, 384, 384).cuda()
     output, output = model(input, input)
     print(output.size())
     # print(output)
 
 model_dict = {
-    "resnet": ResNet,
-    "se_resnet": SEResNet_50,
-    "resnest_50": ResNeSt_50,
-    "cbam_resnet": CBAM_ResNet_50,
     "vgg": VGG,
+    "resnet": ResNet,
+    "seresnet": SEResNet_50,
+    "resnest": ResNeSt_50,
+    "cbamresnet": CBAM_ResNet_50,
     "dense": DenseNet,
-    "efficient": Efficient_Net,
+    "efficientv1": EfficientV1,
+    "efficientv2": EfficientV2,
     "inception": Inceptionv4,
+    "vit":ViT,
 }

@@ -9,6 +9,7 @@ data_path = get_yaml_value("dataset_path")
 
 
 def Create_Training_Datasets(train_data_path=data_path+"/Training/{}".format(height), batch_size=Batch_size):
+
     training_data_loader = {}
 
     transform_drone_list = [
@@ -36,13 +37,13 @@ def Create_Training_Datasets(train_data_path=data_path+"/Training/{}".format(hei
     training_data_loader["drone_train"] = torch.utils.data.DataLoader(drone_train_datasets,
                                                           batch_size=batch_size,
                                                           shuffle=True,
-                                                          num_workers=8,  # 多进程
+                                                          num_workers=4,  # 多进程
                                                           pin_memory=True)  # 锁页内存
 
     training_data_loader["satellite_train"] = torch.utils.data.DataLoader(satellite_train_datasets,
                                                               batch_size=batch_size,
                                                               shuffle=True,
-                                                              num_workers=8,  # 多进程
+                                                              num_workers=4,  # 多进程
                                                               pin_memory=True)  # 锁页内存
 
     return training_data_loader
@@ -80,25 +81,25 @@ def Create_Testing_Datasets(test_data_path=data_path+"/Testing/{}".format(height
     testing_data_loader["query_drone"] = torch.utils.data.DataLoader(image_datasets['query_drone'],
                                                                      batch_size=batch_size,
                                                                      shuffle=False,
-                                                                     num_workers=8,  # 多进程
+                                                                     num_workers=4,  # 多进程
                                                                      pin_memory=True)
 
     testing_data_loader["query_satellite"] = torch.utils.data.DataLoader(image_datasets['query_satellite'],
                                                                          batch_size=batch_size,
                                                                          shuffle=False,
-                                                                         num_workers=8,  # 多进程
+                                                                         num_workers=4,  # 多进程
                                                                          pin_memory=True)  # 锁页内存
 
     testing_data_loader["gallery_drone"] = torch.utils.data.DataLoader(image_datasets['gallery_drone'],
                                                                        batch_size=batch_size,
                                                                        shuffle=False,
-                                                                       num_workers=8,  # 多进程
+                                                                       num_workers=4,  # 多进程
                                                                        pin_memory=True)  # 锁页内存
 
     testing_data_loader["gallery_satellite"] = torch.utils.data.DataLoader(image_datasets['gallery_satellite'],
                                                                            batch_size=batch_size,
                                                                            shuffle=False,
-                                                                           num_workers=8,  # 多进程
+                                                                           num_workers=4,  # 多进程
                                                                            pin_memory=True)  # 锁页内存
 
     return image_datasets, testing_data_loader
