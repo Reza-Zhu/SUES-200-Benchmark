@@ -1,12 +1,14 @@
 # super parameters
 
-batch_size : 8
+batch_size : 16
 model : resnet
-height : 300
-query : satellite
-classes : 89
-num_epochs : 10
-drop_rate : 0.1
+height : 150
+query : drone
+classes : 120
+num_epochs : 60
+drop_rate : 0.2
+weight_decay : 0.0005
 lr : 0.005
-name: resnet_300_2021-11-01-14:52:27
+name: dense_200_2022-01-28-15:05:27
 dataset_path: /media/data1/Datasets
+weight_save_path: /media/data1/save_model_weight
