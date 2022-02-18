@@ -19,6 +19,10 @@
 
 3. 开始测试：执行 test_and_evaluate.py 会开始测试并输出测试结果，最后的结果会保存在save_model_weight中
 
+4. 开始评估：执行 evaluation_methods.py 评估算法的适应性、稳定性、实时性。
+
+基于网格搜素的自动调参数文件：AutoTuning.py
+
 定义特征提取算法的文件：model_.py
 
 CBAM_ResNet 算法模型定义：senet/cbam_resnet.py
