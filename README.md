@@ -1,5 +1,5 @@
 # SUES-200: A Multi-height Multi-scene Cross-view Image Matching Datasets Between UAV and Satellite
- **Early Access Code**
+ **Early Access**
  
 ### 用双分支卷积网络训练和测试：
 
@@ -8,6 +8,7 @@
    该配置文件配置了 
 
    - 数据集地址 dataset_path
+   - 权重文件保存地址 weight_save_path
    - 选取不同高度的数据 height
    - 训练时选用的特征提取模型 model
    - 训练时的学习率 lr
@@ -15,7 +16,7 @@
    - 模型中的drop out  drop_rate
    - 训练时的批次大小 batch_size
 
-2. 开始训练：执行 train.py ，会根据上面配置好的参数进行训练，比较好的模型权重会保存在save_model_weight（训练时会自动创建该文件夹）中
+2. 开始训练：执行 train.py 会根据上面配置好的参数进行训练，比较好的模型权重会保存在权重文件保存地址下的save_model_weight文件夹中（训练时会自动创建该文件夹）
 
 3. 开始测试：执行 test_and_evaluate.py 会开始测试并输出测试结果，最后的结果会保存在save_model_weight中
 
