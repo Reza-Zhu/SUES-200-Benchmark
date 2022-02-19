@@ -89,7 +89,40 @@ def evaluate_stability(model_name):
 
     return stability_drone, stability_satellite
 
+
+def evaluate_realtime(model_name):
+    drone_list, satellite_list = select_best_weight(model_name)
+    time_height_dict = {}
+    for csv in drone_list:
+        height = csv.split("_")[-2]
+        time_ave_dict = {}
+        table = pd.read_csv(csv, index_col=0)
+        drone_time_list = list(table.loc["time"])[:5]
+        drone_time_list.remove(max(drone_time_list))
+        drone_time_list.remove(min(drone_time_list))
+
+        drone_time_ave = sum(drone_time_list)/len(drone_time_list)
+        time_ave_dict["drone"] = drone_time_ave
+
+        time_height_dict[height] = time_ave_dict
+    print(time_height_dict)
+
+    for csv in satellite_list:
+        height = csv.split("_")[-2]
+        time_ave_dict = {}
+        table = pd.read_csv(csv, index_col=0)
+
+        satellite_time_list = list(table.loc["time"][5:10])
+        satellite_time_list.remove(max(satellite_time_list))
+        satellite_time_list.remove(min(satellite_time_list))
+        satellite_time_ave = sum(satellite_time_list)/len(satellite_time_list)
+        time_ave_dict["satellite"] = satellite_time_ave
+        time_height_dict[height]["satellite"] = time_ave_dict["satellite"]
+    return time_height_dict
+
+
 if __name__ == '__main__':
-    print(evaluate_stability("resnet"))
-    adaption = evaluate_adaption_rate("resnet")
-    print(adaption)
+    # print(evaluate_stability("resnet"))
+    # adaption = evaluate_adaption_rate("resnet")
+    # print(adaption)
+    print(evaluate_realtime("resnet"))
