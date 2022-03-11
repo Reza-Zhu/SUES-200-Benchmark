@@ -27,7 +27,7 @@ def create_datasets(path, data_list, character):
 SPLIT_VALUE = 0.6
 
 # 原始数据地址
-raw_datasets_path = "../../RAW_DATASETS"
+raw_datasets_path = "/media/data1/RAW_DATASETS"
 video_name = ["150", "200", "250", "300"]
 
 Training_path = os.path.join(raw_datasets_path, "Training")

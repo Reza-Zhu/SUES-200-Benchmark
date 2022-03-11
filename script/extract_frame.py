@@ -4,6 +4,7 @@ import glob
 
 video_name = [150, 200, 250, 300]
 NUMBER = 50
+
 for k in range(3):
     dir_str = "{:0>4d}".format(k+1)
     drone_view_path = os.path.join(".." + os.sep + "..", "drone-view", dir_str)
