@@ -3,7 +3,8 @@ import sys
 import yaml
 import torch
 import model_
-
+import pandas as pd
+from evaluation_methods import select_best_weight
 
 def get_yaml_value(key_name, file_name="settings.yaml"):
     f = open(file_name, 'r', encoding="utf-8")
@@ -94,10 +95,37 @@ def create_dir(path):
         os.mkdir(path)
 
 
+def get_best_weight(query_name, model_name, height):
+    drone_best_list, satellite_best_list = select_best_weight(model_name)
+    if "drone" in query_name:
+        for weight in drone_best_list:
+            if str(height) in weight:
+                drone_best_weight = weight.split(".")[0]
+                table = pd.read_csv(weight, index_col=0)
+                values = list(table.loc["recall@1", :])[:5]
+                indexes = list(table.loc["recall@1", :].index)[:5]
+                net_name = indexes[values.index(max(values))]
+                net = net_name.split("_")[2] + "_" + net_name.split("_")[3]
+                net_path = os.path.join(drone_best_weight, net)
+                # print(values, indexes)
+    if "satellite" in query_name:
+        for weight in satellite_best_list:
+            if str(height) in weight:
+                satellite_best_weight = weight.split(".")[0]
+                table = pd.read_csv(weight, index_col=0)
+                values = list(table.loc["recall@1", :])[5:10]
+                indexes = list(table.loc["recall@1", :].index)[5:10]
+                net_name = indexes[values.index(max(values))]
+                net = net_name.split("_")[2] + "_" + net_name.split("_")[3]
+                net_path = os.path.join(satellite_best_weight, net)
+    return net_path
+
+
 def parameter(index_name, index_number):
     with open("settings.yaml", "r", encoding="utf-8") as f:
         setting_dict = yaml.load(f, Loader=yaml.FullLoader)
         setting_dict[index_name] = index_number
+        print(setting_dict)
         f.close()
         with open("settings.yaml", "w", encoding="utf-8") as f:
             yaml.dump(setting_dict, f)

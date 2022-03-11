@@ -1,5 +1,6 @@
 import os
 import glob
+import numpy as np
 import pandas as pd
 
 
@@ -56,36 +57,75 @@ def evaluate_adaption_rate(model_name):
     return evaluate_satellite_height/evaluate_drone_height
 
 
-def evaluate_stability(model_name):
+def forming_precision_table(model_list, save_dir):
+
+    for model_name in model_list:
+        drone_list, satellite_list = select_best_weight(model_name)
+        drone_total_frame = pd.DataFrame()
+        satellite_total_frame = pd.DataFrame()
+        for csv in drone_list:
+            table = pd.read_csv(csv, index_col=0)
+            values = list(table.loc["recall@1", :])[:5]
+            indexes = list(table.loc["recall@1", :].index)[:5]
+            net_name = indexes[values.index(max(values))]
+            recall_ap_list = table.loc[:, net_name].drop(["recall@1p"])
+            drone_total_frame = pd.concat([drone_total_frame, recall_ap_list], axis=1)
+
+        drone_total_frame.columns = ["150", "200", "250", "300"]
+        drone_total_frame = drone_total_frame.T
+        drone_total_frame.to_csv(os.path.join(save_dir, model_name+"_drone.csv"))
+        print(drone_total_frame)
+
+        for csv in satellite_list:
+            table = pd.read_csv(csv, index_col=0)
+            values = list(table.loc["recall@1", :])[5:10]
+            indexes = list(table.loc["recall@1", :].index)[5:10]
+            net_name = indexes[values.index(max(values))]
+            recall_ap_list = table.loc[:, net_name].drop(["recall@1p"])
+            satellite_total_frame = pd.concat([satellite_total_frame, recall_ap_list], axis=1)
+
+        satellite_total_frame.columns = ["150", "200", "250", "300"]
+        satellite_total_frame = satellite_total_frame.T
+        satellite_total_frame.to_csv(os.path.join(save_dir, model_name+"_satellite.csv"))
+        print(satellite_total_frame)
+
+
+def evaluate_stability(model_name, evaluation_value):
 
     drone_list, satellite_list = select_best_weight(model_name)
-    # print(drone_list)
-    # print(satellite_list)
-    evaluate_value_drone_height = {}
-    evaluate_value_satellite_height = {}
+    print(drone_list)
+    print(satellite_list)
+    evaluate_value_drone_height = []
+    evaluate_value_satellite_height = []
     for csv in drone_list:
         for height in ["150", "200", "250", "300"]:
             if height in csv:
                 table = pd.read_csv(csv, index_col=0)
-                evaluate_value_drone_height[height] = table.at["recall@1", "drone_max"]
+                evaluate_value_drone_height.append(table.at[evaluation_value, "drone_max"])
+    print(evaluate_value_drone_height)
+    stability_drone = np.std(evaluate_value_drone_height)
+
     for csv in satellite_list:
         for height in ["150", "200", "250", "300"]:
             if height in csv:
                 table = pd.read_csv(csv, index_col=0)
-                evaluate_value_satellite_height[height] = table.at["recall@1", "satellite_max"]
-    delta_drone_AP1 = (evaluate_value_drone_height["200"] - evaluate_value_drone_height["150"])/50
-    delta_drone_AP2 = (evaluate_value_drone_height["250"] - evaluate_value_drone_height["200"])/50
-    delta_drone_AP3 = (evaluate_value_drone_height["300"] - evaluate_value_drone_height["250"])/50
-    delta_drone_list = [delta_drone_AP1, delta_drone_AP2, delta_drone_AP3]
-    average_drone = sum(delta_drone_list)/len(delta_drone_list)
-    stability_drone = {"delta_drone": delta_drone_list, "average_drone": average_drone}
+                evaluate_value_satellite_height.append(table.at[evaluation_value, "satellite_max"])
+    print(evaluate_value_satellite_height)
+    stability_satellite = np.std(evaluate_value_satellite_height)
 
-    delta_satellite_AP1 = (evaluate_value_satellite_height["200"] - evaluate_value_satellite_height["150"])/50
-    delta_satellite_AP2 = (evaluate_value_satellite_height["250"] - evaluate_value_satellite_height["300"])/50
-    delta_satellite_AP3 = (evaluate_value_satellite_height["300"] - evaluate_value_satellite_height["250"])/50
-    delta_satellite_list = [delta_satellite_AP1, delta_satellite_AP2, delta_satellite_AP3]
-    average_satellite = sum(delta_satellite_list)/len(delta_drone_list)
-    stability_satellite = {"delta_drone": delta_satellite_list, "average_drone": average_satellite}
+    # delta_drone_AP1 = (evaluate_value_drone_height["200"] - evaluate_value_drone_height["150"])/50
+    # delta_drone_AP2 = (evaluate_value_drone_height["250"] - evaluate_value_drone_height["200"])/50
+    # delta_drone_AP3 = (evaluate_value_drone_height["300"] - evaluate_value_drone_height["250"])/50
+    # delta_drone_list = [delta_drone_AP1, delta_drone_AP2, delta_drone_AP3]
+    # average_drone = sum(delta_drone_list)/len(delta_drone_list)
+    # stability_drone = {"delta_drone": delta_drone_list, "average_drone": average_drone}
+    #
+    # delta_satellite_AP1 = (evaluate_value_satellite_height["200"] - evaluate_value_satellite_height["150"])/50
+    # delta_satellite_AP2 = (evaluate_value_satellite_height["250"] - evaluate_value_satellite_height["200"])/50
+    # delta_satellite_AP3 = (evaluate_value_satellite_height["300"] - evaluate_value_satellite_height["250"])/50
+    # delta_satellite_list = [delta_satellite_AP1, delta_satellite_AP2, delta_satellite_AP3]
+    # average_satellite = sum(delta_satellite_list)/len(delta_satellite_list)
+    # stability_satellite = {"delta_drone": delta_satellite_list, "average_drone": average_satellite}
 
     return stability_drone, stability_satellite
 
@@ -122,7 +162,11 @@ def evaluate_realtime(model_name):
 
 
 if __name__ == '__main__':
-    # print(evaluate_stability("resnet"))
+    model_list = ["vgg", "resnet", "resnest", "seresnet", "cbamresnet", "dense", "efficientv1", "inception"]
+    path = "result"
+    forming_precision_table(model_list, path)
+    # print(select_best_weight("resnet"))
+    # print(evaluate_stability("vgg", "recall@1"))
     # adaption = evaluate_adaption_rate("resnet")
     # print(adaption)
-    print(evaluate_realtime("resnet"))
+    # print(evaluate_realtime("vgg"))

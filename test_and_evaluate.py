@@ -302,5 +302,6 @@ def eval_and_test():
     else:
         print("Don't have enough weights to evaluate!")
 
+
 if __name__ == '__main__':
     eval_and_test()

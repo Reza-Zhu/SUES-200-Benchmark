@@ -24,10 +24,9 @@ base_model = nn.Sequential(
 num_epochs = get_yaml_value("num_epochs")
 height = get_yaml_value("height")
 classes = get_yaml_value("classes")
-model_name = get_yaml_value("model")
+model_name = "NetVLAD"
 
-lr = get_yaml_value("lr")
-
+lr = 0.01
 dim = list(base_model.parameters())[-1].shape[0]
 netVLAD = NetVLAD(num_clusters=classes, dim=dim, alpha=1.0)
 model = EmbedNet(base_model, netVLAD).cuda()
@@ -45,12 +44,20 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     total = 0.0
     model.train(True)
+    # for data1, data2 in zip(data_loader["satellite_train"], data_loader["drone_train"]):
     for batch_dix, (input1, label1) in enumerate(data_loader["drone_train"]):
+
+        # input1, label1 = data1
+        # input2, label2 = data2
+        # print("label1:", label1)
+        # print("label2:", label2)
+
         input1 = input1.cuda()
         label1 = label1.cuda()
         total += label1.size(0)
         optimizer.zero_grad()
         output1 = model(input1)
+        print(output1.shape)
         loss = criterion(output1, label1)
         loss.backward()
         optimizer.step()
@@ -62,11 +69,13 @@ for epoch in range(num_epochs):
     epoch_loss = running_loss/total
     print('<<<<[Epoch {}/{}] {} | Loss: {:.8f} |>>>>'\
           .format(epoch + 1, num_epochs, "Train", epoch_loss))
-    save_dir = "./save_model_weight/NetVLAD_%s_%s" % (height, current_time)
+    save_dir = "/media/data1/save_model_weight/" + model_name+"_"+current_time
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
     if epoch_loss < min_loss:
         min_loss = epoch_loss
-        save_network(model, model_name, current_time, epoch + 1)
+        save_network(model, model_name+"_"+current_time, epoch + 1)
         print(model_name + "Epoch: " + str(epoch + 1) + " has saved with loss: " + str(epoch_loss))
 
         # if not os.path.exists(save_dir):

@@ -27,8 +27,7 @@ def Auto_tune(model_list, height_list, drop_rate, learning_rate):
 
 height_list = [150, 200, 250, 300]
 learning_rate = [0.005, 0.01, 0.015, 0.02]
-drop_rate = [0.2, 0.3, 0.4]
-# weight_decay = [0.001, 0.0001]
-model_list = ["vgg", "efficientv1","inception"]
-Auto_tune(model_list, height_list, drop_rate, learning_rate)
+drop_rate = [0.2, 0.3, 0.4, 0.5]
 
+model_list = ["vgg", "resnet", "resnest", "seresnet", "cbamresnet", "dense", "efficientv1", "inception"]
+Auto_tune(model_list, height_list, drop_rate, learning_rate)

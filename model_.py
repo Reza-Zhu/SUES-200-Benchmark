@@ -174,9 +174,9 @@ class VGG(nn.Module):
 class DenseNet(nn.Module):
     def __init__(self, class_num, drop_rate):
         super(DenseNet, self).__init__()
-        self.model_1 = timm.create_model("densenet169", pretrained=True, num_classes=0)
-        self.model_2 = timm.create_model("densenet169", pretrained=True, num_classes=0)
-        self.classifier = ClassBlock(1664, class_num, drop_rate)
+        self.model_1 = timm.create_model("densenet201", pretrained=True, num_classes=0)
+        self.model_2 = timm.create_model("densenet201", pretrained=True, num_classes=0)
+        self.classifier = ClassBlock(1920, class_num, drop_rate)
 
     def forward(self, x1, x2):
         if x1 is None:
@@ -196,9 +196,9 @@ class DenseNet(nn.Module):
 class EfficientV1(nn.Module):
     def __init__(self, classes, drop_rate):
         super(EfficientV1, self).__init__()
-        self.model_1 = timm.create_model("efficientnet_b1", pretrained=True, num_classes=0)
-        self.model_2 = timm.create_model("efficientnet_b1", pretrained=True, num_classes=0)
-        self.classifier = ClassBlock(1280, classes, drop_rate)
+        self.model_1 = timm.create_model("efficientnet_b4", pretrained=True, num_classes=0)
+        self.model_2 = timm.create_model("efficientnet_b4", pretrained=True, num_classes=0)
+        self.classifier = ClassBlock(1792, classes, drop_rate)
 
     def forward(self, x1, x2):
         if x1 is None:
@@ -279,6 +279,7 @@ class ViT(nn.Module):
             y2 = self.classifier(x2)
         return y1, y2
 
+
 def weights_init_kaiming(m):
     classname = m.__class__.__name__
     # print(classname)
@@ -324,5 +325,5 @@ model_dict = {
     "efficientv1": EfficientV1,
     "efficientv2": EfficientV2,
     "inception": Inceptionv4,
-    "vit":ViT,
+    "vit": ViT,
 }
