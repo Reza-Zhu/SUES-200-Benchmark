@@ -3,6 +3,7 @@ import re
 import glob
 import torch
 import model_
+import random
 import pandas as pd
 import numpy as np
 from torch import nn
@@ -19,7 +20,8 @@ def get_rank(height, query_name, gallery_name, model_name):
     gallery_satellite_path = os.path.join(data_path, "gallery_satellite")
     gallery_drone_list = glob.glob(os.path.join(gallery_drone_path, "*"))
     gallery_drone_list = sorted(gallery_drone_list, key=lambda x: int(re.findall("[0-9]+", x[-4:])[0]))
-    print(gallery_drone_list)
+    # print(gallery_drone_list)
+
     gallery_satellite_list = glob.glob(os.path.join(gallery_satellite_path, "*"))
     gallery_satellite_list = sorted(gallery_satellite_list, key=lambda x: int(re.findall("[0-9]+", x[-4:])[0]))
     drone_list = []
@@ -39,9 +41,7 @@ def get_rank(height, query_name, gallery_name, model_name):
                 satellite_list.append(img)
 
     image_datasets, data_loader = Create_Testing_Datasets(test_data_path=data_path)
-
     net_path = get_best_weight(query_name, model_name, height)
-
     which_query = which_view(query_name)
     which_gallery = which_view(gallery_name)
     print(net_path)
@@ -52,24 +52,40 @@ def get_rank(height, query_name, gallery_name, model_name):
     model = model.cuda()
     query_feature = extract_feature(model, data_loader[query_name], which_query)
     gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
-    print(image_datasets[query_name].imgs)
-    for i in range(80):
+    query_img_list = image_datasets[query_name].imgs
+    matching_table = {}
+    random_sample_list = random.sample(range(0, len(query_img_list)), 10)
+    print(random_sample_list)
+    for i in random_sample_list:
         query = query_feature[i].view(-1, 1)
         score = torch.mm(gallery_feature, query)
         score = score.squeeze(1).cpu()
         index = np.argsort(score.numpy())
         index = index[::-1].tolist()
         max_score_list = index[0:10]
-
+        query_img = query_img_list[i][0]
+        most_correlative_img = []
         for index in max_score_list:
-            most_correlative_img = drone_list[index]
-            print(most_correlative_img)
-        break
+            if "satellite" in query_name:
+                most_correlative_img.append(drone_list[index])
+            elif "drone" in query_name:
+                most_correlative_img.append(satellite_list[index])
+        matching_table[query_img] = most_correlative_img
+    matching_table = pd.DataFrame(matching_table)
+    print(matching_table)
+    save_path = "result/" + query_name.split("_")[-1] + "_" + model_name + "_" + str(height) + "_matching.csv"
+    matching_table.to_csv(save_path)
 
-    # def paint_heat_map():
+def summary_csv_extract_pic(csv_path):
+    csv_table = pd.read_csv(csv_path)
+    print(csv_table)
+    # csv_table[]
 
 
 if __name__ == '__main__':
     query_name = 'query_satellite'
     gallery_name = 'gallery_drone'
-    get_rank(300, 'query_satellite', 'gallery_drone', "resnet")
+    model_list = ["resnet", "seresnet", "dense"]
+    for model in model_list:
+        for height in [150, 200, 250, 300]:
+            get_rank(height, query_name, gallery_name, model)

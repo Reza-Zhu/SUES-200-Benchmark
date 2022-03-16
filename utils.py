@@ -1,9 +1,11 @@
 import os
 import sys
+import glob
 import yaml
 import torch
 import model_
 import pandas as pd
+from shutil import copyfile,copy
 from evaluation_methods import select_best_weight
 
 def get_yaml_value(key_name, file_name="settings.yaml"):
@@ -130,3 +132,35 @@ def parameter(index_name, index_number):
         with open("settings.yaml", "w", encoding="utf-8") as f:
             yaml.dump(setting_dict, f)
             f.close()
+
+
+def summary_csv_extract_pic(csv_path):
+    csv_table = pd.read_csv(csv_path, index_col=0)
+    csv_path = os.path.join("result", csv_path.split("_")[-3])
+    create_dir(csv_path)
+    query_pic = list(csv_table.columns)
+    for pic in query_pic:
+        dir_path = os.path.join(csv_path, pic.split("/")[-4] + "_" + pic.split("/")[-3])
+        create_dir(dir_path)
+        dir_path = os.path.join(dir_path, pic.split("/")[-2])
+        create_dir(dir_path)
+        copy(pic, dir_path)
+        gallery_list = list(csv_table[pic])
+        print(gallery_list)
+        count = 0
+        for gl_path in gallery_list:
+            print(gl_path)
+            copy(gl_path, dir_path)
+            src_name = os.path.join(dir_path, gl_path.split("/")[-1])
+            dest_name = os.path.dirname(src_name) + os.sep + str(count) + "_" + gl_path.split("/")[-2] + "." + gl_path.split(".")[-1]
+            print(src_name)
+            print(dest_name)
+            os.rename(src_name, dest_name)
+            count = count + 1
+
+if __name__ == '__main__':
+    csv_list = glob.glob(os.path.join("result", "*matching.csv"))
+    print(len(csv_list))
+    for csv in csv_list:
+        summary_csv_extract_pic(csv)
+        # break
