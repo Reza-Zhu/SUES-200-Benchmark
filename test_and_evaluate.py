@@ -160,9 +160,9 @@ def eval_and_test():
     # print("Testing Start >>>>>>>>")
     table_path = os.path.join(get_yaml_value("weight_save_path"),
                               get_yaml_value("name") + ".csv")
-    save_model_list = glob.glob(os.path.join("/media/data1/save_model_weight",
+    save_model_list = glob.glob(os.path.join(get_yaml_value("weight_save_path"),
                                              get_yaml_value('name'), "*.pth"))
-    if os.path.exists(os.path.join("/media/data1/save_model_weight",
+    if os.path.exists(os.path.join(get_yaml_value("weight_save_path"),
                                    get_yaml_value('name'))) and len(save_model_list) >= 5:
         if not os.path.exists(table_path):
             evaluate_csv = pd.DataFrame(index=["recall@1", "recall@5", "recall@10", "recall@1p", "AP", "time"])
