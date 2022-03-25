@@ -1,0 +1,14 @@
+# super parameters
+
+batch_size : 32
+model : seresnet
+query : drone
+classes : 701
+num_epochs : 80
+drop_rate : 0.7
+weight_decay : 0.0001
+lr : 0.1
+name: resnet_1652_2022-03-17-23:56:24
+dataset_path: /media/data1/University-Release/University-Release/train
+weight_save_path: /media/data1/save_model_weight
+image_size: 256
