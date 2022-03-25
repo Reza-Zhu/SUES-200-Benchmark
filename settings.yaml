@@ -1,14 +1,17 @@
 # super parameters
 
-batch_size : 16
-model : resnet
+batch_size : 8
+fp16 : 0
+model : seresnet
 height : 150
 query : drone
 classes : 120
-num_epochs : 60
-drop_rate : 0.2
-weight_decay : 0.0005
-lr : 0.005
-name: dense_200_2022-01-28-15:05:27
+num_epochs : 80
+drop_rate : 0.3
+weight_decay : 0.0001
+lr : 0.08
+name: seresnet_150_2022-03-19-09:45:54
 dataset_path: /media/data1/Datasets
-weight_save_path: /media/data1/save_model_weight
+weight_save_path: /media/data1/save_loss2_weight
+loss_function: contrastive
+image_size: 384

@@ -97,15 +97,18 @@ def create_dir(path):
         os.mkdir(path)
 
 
-def get_best_weight(query_name, model_name, height):
-    drone_best_list, satellite_best_list = select_best_weight(model_name)
+def get_best_weight(query_name, model_name, height, csv_path):
+    drone_best_list, satellite_best_list = select_best_weight(model_name, csv_path)
+    net_path = None
     if "drone" in query_name:
         for weight in drone_best_list:
             if str(height) in weight:
                 drone_best_weight = weight.split(".")[0]
                 table = pd.read_csv(weight, index_col=0)
-                values = list(table.loc["recall@1", :])[:5]
-                indexes = list(table.loc["recall@1", :].index)[:5]
+                query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
+
+                values = list(table.loc["recall@1", :])[:query_number]
+                indexes = list(table.loc["recall@1", :].index)[:query_number]
                 net_name = indexes[values.index(max(values))]
                 net = net_name.split("_")[2] + "_" + net_name.split("_")[3]
                 net_path = os.path.join(drone_best_weight, net)
@@ -115,13 +118,14 @@ def get_best_weight(query_name, model_name, height):
             if str(height) in weight:
                 satellite_best_weight = weight.split(".")[0]
                 table = pd.read_csv(weight, index_col=0)
-                values = list(table.loc["recall@1", :])[5:10]
-                indexes = list(table.loc["recall@1", :].index)[5:10]
+                query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
+
+                values = list(table.loc["recall@1", :])[query_number:query_number*2]
+                indexes = list(table.loc["recall@1", :].index)[query_number:query_number*2]
                 net_name = indexes[values.index(max(values))]
                 net = net_name.split("_")[2] + "_" + net_name.split("_")[3]
                 net_path = os.path.join(satellite_best_weight, net)
     return net_path
-
 
 def parameter(index_name, index_number):
     with open("settings.yaml", "r", encoding="utf-8") as f:

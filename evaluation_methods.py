@@ -14,8 +14,8 @@ def softmax(x):
     return y
 
 
-def select_best_weight(model_name):
-    csv_path = "/media/data1/save_model_weight"
+def select_best_weight(model_name, csv_path):
+    # csv_path = "./save_model_weight"
     model_csv_list = glob.glob(os.path.join(csv_path, model_name + "*.csv"))
 
     drone_list = []
@@ -50,8 +50,8 @@ def select_best_weight(model_name):
     return drone_list, satellite_list
 
 
-def evaluate_adaption_rate(model_name):
-    drone_list, satellite_list = select_best_weight(model_name)
+def evaluate_adaption_rate(model_name, csv_path):
+    drone_list, satellite_list = select_best_weight(model_name, csv_path)
     evaluate_drone_height = 0
     evaluate_satellite_height = 0
 
@@ -67,15 +67,16 @@ def evaluate_adaption_rate(model_name):
     return evaluate_satellite_height / evaluate_drone_height
 
 
-def forming_precision_table(model_list, save_dir):
+def forming_precision_table(model_list, save_dir, csv_path):
     for model_name in model_list:
-        drone_list, satellite_list = select_best_weight(model_name)
+        drone_list, satellite_list = select_best_weight(model_name, csv_path)
         drone_total_frame = pd.DataFrame()
         satellite_total_frame = pd.DataFrame()
         for csv in drone_list:
             table = pd.read_csv(csv, index_col=0)
-            values = list(table.loc["recall@1", :])[:5]
-            indexes = list(table.loc["recall@1", :].index)[:5]
+            query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
+            values = list(table.loc["recall@1", :])[:query_number]
+            indexes = list(table.loc["recall@1", :].index)[:query_number]
             net_name = indexes[values.index(max(values))]
             recall_ap_list = table.loc[:, net_name].drop(["recall@1p"])
             drone_total_frame = pd.concat([drone_total_frame, recall_ap_list], axis=1)
@@ -87,8 +88,9 @@ def forming_precision_table(model_list, save_dir):
 
         for csv in satellite_list:
             table = pd.read_csv(csv, index_col=0)
-            values = list(table.loc["recall@1", :])[5:10]
-            indexes = list(table.loc["recall@1", :].index)[5:10]
+            query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
+            values = list(table.loc["recall@1", :])[query_number:query_number*2]
+            indexes = list(table.loc["recall@1", :].index)[query_number:query_number*2]
             net_name = indexes[values.index(max(values))]
             recall_ap_list = table.loc[:, net_name].drop(["recall@1p"])
             satellite_total_frame = pd.concat([satellite_total_frame, recall_ap_list], axis=1)
@@ -99,7 +101,7 @@ def forming_precision_table(model_list, save_dir):
         print(satellite_total_frame)
 
 
-def evaluate_stability(model_list, evaluation_value):
+def evaluate_stability(model_list, evaluation_value, csv_path):
     # print(model_name)
     satellite_mae_list = []
     satellite_mean_list = []
@@ -108,7 +110,7 @@ def evaluate_stability(model_list, evaluation_value):
     drone_mean_list = []
     drone_total = []
     for model_name in model_list:
-        drone_list, satellite_list = select_best_weight(model_name)
+        drone_list, satellite_list = select_best_weight(model_name, csv_path)
         evaluate_value_drone_height = []
         evaluate_value_satellite_height = []
         for csv in drone_list:
@@ -123,9 +125,6 @@ def evaluate_stability(model_list, evaluation_value):
         drone_mae_list.append(reciprocal_stability_drone)
         drone_mean_list.append(evaluate_value_drone_height)
 
-
-
-
         for csv in satellite_list:
             for height in ["150", "200", "250", "300"]:
                 if height in csv:
@@ -137,15 +136,16 @@ def evaluate_stability(model_list, evaluation_value):
         reciprocal_stability_satellite = 1 / mean_absolute_error(evaluate_value_satellite_height, mean_satellite)
         satellite_mae_list.append(reciprocal_stability_satellite)
         satellite_mean_list.append(evaluate_value_satellite_height)
-    scale = MinMaxScaler(feature_range=(0.4, 0.6))
 
+    scale = MinMaxScaler(feature_range=(0.4, 0.6))
     drone_mean_list = np.array(drone_mean_list).reshape(-1, 4)
     drone_mae_list = scale.fit_transform(np.array(drone_mae_list).reshape(-1, 1)).reshape(-1, 1)
+    print(drone_mean_list)
+    print(drone_mae_list)
 
     for i in range(len(drone_mean_list)):
         drone_mean_list[i] = np.mean(drone_mean_list[i] * drone_mae_list[i])
         drone_total.append(drone_mean_list[i][0])
-
 
     scale = MinMaxScaler(feature_range=(0.4, 0.6))
     satellite_mean_list = np.array(satellite_mean_list).reshape(-1, 4)
@@ -163,18 +163,20 @@ def evaluate_stability(model_list, evaluation_value):
     table.columns = model_list
 
     table.to_csv("result/stability.csv")
-    print(table)
+    # print(table)
     # return table
 
 
-def evaluate_realtime(model_name):
-    drone_list, satellite_list = select_best_weight(model_name)
+def evaluate_realtime(model_name, csv_path):
+    drone_list, satellite_list = select_best_weight(model_name, csv_path)
     time_ave_dict = {"drone": 0, "satellite": 0}
 
     for csv in drone_list:
         height = csv.split("_")[-2]
         table = pd.read_csv(csv, index_col=0)
-        drone_time_list = list(table.loc["time"])[:5]
+        query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
+
+        drone_time_list = list(table.loc["time"])[:query_number]
         drone_time_list.remove(max(drone_time_list))
         drone_time_list.remove(min(drone_time_list))
 
@@ -187,8 +189,9 @@ def evaluate_realtime(model_name):
     for csv in satellite_list:
         height = csv.split("_")[-2]
         table = pd.read_csv(csv, index_col=0)
+        query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
 
-        satellite_time_list = list(table.loc["time"][5:10])
+        satellite_time_list = list(table.loc["time"][query_number:query_number*2])
         satellite_time_list.remove(max(satellite_time_list))
         satellite_time_list.remove(min(satellite_time_list))
         satellite_time_ave = sum(satellite_time_list) / len(satellite_time_list)
@@ -206,10 +209,23 @@ if __name__ == '__main__':
 
     model_list = ["vgg", "resnet", "resnest", "seresnet", "cbamresnet", "dense", "efficientv1", "inception"]
     #### stability ####
-    evaluate_stability(model_list, "recall@1")
+    csv_path = "/media/data1/save_model_weight"
+
+    evaluate_stability(model_list, "recall@1", csv_path)
+
+    # print("no shared weight")
+    # csv_path = "/media/data1/save_model_weight"
+    # forming_precision_table(["seresnet"], "result", csv_path)
+    #
+    # csv_path = "/media/data1/save_datasets_6_weight"
+    # print(select_best_weight("seresnet", csv_path))
+    # forming_precision_table(["seresnet"], "result", csv_path)
+
+    # print("shared weight")
+    # csv_path = "./save_model_weight"
+    # forming_precision_table(["seresnet"], "result", csv_path)
 
 
-    # forming_precision_table(["vit"], "result")
     #### ad ####
     # ad = {}
     # for model in model_list:

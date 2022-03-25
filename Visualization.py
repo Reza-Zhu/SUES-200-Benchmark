@@ -13,7 +13,7 @@ from test_and_evaluate import extract_feature
 from Preprocessing import Create_Testing_Datasets
 
 
-def get_rank(height, query_name, gallery_name, model_name):
+def get_rank(height, query_name, gallery_name, model_name, csv_path):
     data_path = get_yaml_value("dataset_path")
     data_path = data_path + "/Testing/{}".format(height)
     gallery_drone_path = os.path.join(data_path, "gallery_drone")
@@ -41,7 +41,7 @@ def get_rank(height, query_name, gallery_name, model_name):
                 satellite_list.append(img)
 
     image_datasets, data_loader = Create_Testing_Datasets(test_data_path=data_path)
-    net_path = get_best_weight(query_name, model_name, height)
+    net_path = get_best_weight(query_name, model_name, height, csv_path)
     which_query = which_view(query_name)
     which_gallery = which_view(gallery_name)
     print(net_path)
@@ -86,6 +86,7 @@ if __name__ == '__main__':
     query_name = 'query_satellite'
     gallery_name = 'gallery_drone'
     model_list = ["resnet", "seresnet", "dense"]
+    csv_path = "/media/data1/save_model_weight"
     for model in model_list:
         for height in [150, 200, 250, 300]:
-            get_rank(height, query_name, gallery_name, model)
+            get_rank(height, query_name, gallery_name, model, csv_path)

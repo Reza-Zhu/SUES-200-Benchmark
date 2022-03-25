@@ -170,7 +170,7 @@ def eval_and_test():
             evaluate_csv = pd.read_csv(table_path)
             evaluate_csv.index = evaluate_csv["index"]
         for query in ['drone', 'satellite']:
-            for seq in range(-5, 0):
+            for seq in range(-3, 0):
                 model, net_name = load_network(seq=seq)
                 print(net_name)
                 model.classifier.classifier = nn.Sequential()
@@ -289,10 +289,11 @@ def eval_and_test():
         # evaluate_csv["max"] =
         drone_max = []
         satellite_max = []
+        query_number = len(list(filter(lambda x: "drone" in x, evaluate_csv.columns)))
 
         for index in evaluate_csv.index:
-            drone_max.append(evaluate_csv.loc[index].iloc[:5].max())
-            satellite_max.append(evaluate_csv.loc[index].iloc[5:].max())
+            drone_max.append(evaluate_csv.loc[index].iloc[:query_number].max())
+            satellite_max.append(evaluate_csv.loc[index].iloc[query_number:].max())
 
         evaluate_csv['drone_max'] = drone_max
         evaluate_csv['satellite_max'] = satellite_max
