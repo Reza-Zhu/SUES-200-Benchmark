@@ -1,7 +1,123 @@
 # SUES-200: A Multi-height Multi-scene Cross-view Image Matching Benchmark Across UAV and Satellite
+
  **Early Access**
- 
-### 用双分支卷积网络训练和测试：
+
+## Datasets
+
+Download SUES-200 dataset. You may send me an email and claim not use this dataset for profit. SUES-200 is **ONLY  available to academic research**.
+
+My email : m025120503@sues.edu.cn
+
+
+
+## Quickly Start
+
+### Installation
+
+- Install Pytorch Torchvision https://pytorch.org/get-started/locally/
+- install other libs
+
+```
+pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python pytorch_grad_cam
+```
+
+### Config File
+
+default: settings.yaml
+
+```yaml
+# dateset path
+dataset_path: /media/data1/Datasets
+weight_save_path: /media/data1/save_model_weight
+
+# intial parameters
+fp16 : 0  # apex
+classes : 120 # 200*0.6=120
+image_size: 384
+
+# choose model
+model : resnet
+
+# super parameters
+batch_size : 32
+num_epochs : 80
+drop_rate : 0.2
+weight_decay : 0.0005
+lr : 0.005
+
+# test and evaluate
+
+
+# if LPN
+block : 4
+
+# if SUES-200
+height : 150
+
+```
+
+### Split Dataset
+
+```bash
+python script/split_dataset.py --path your_path --coff 0.6
+mkdir your_path/Dataset
+mv your_path/Training your_path/Dataset
+mv your_path/Testing your_path/Dataset
+```
+
+
+
+### Train
+
+```bash
+python train --cfg settings.yaml
+```
+
+
+
+### Test & evaluate
+
+```bash
+python test_and_evaluate --cfg settings.yaml --name resnet_150_2022-04-25-10:26:34 --seq -3
+```
+
+
+
+## TO-DO List
+
+- [ ] Improve README.md (ing...)
+  - [ ] Evaluation methods
+  - [ ] Visualization
+  - [ ] Multiqueries
+  - [ ] Draw heat map
+  - [ ] ...
+
+- [ ] Support University-1652 (ing....)
+- [ ] Support CVUSA and CVACT
+- [ ] ...
+
+##  
+
+## Citation
+
+```
+@misc{zhu2022sues200,
+      title={SUES-200: A Multi-height Multi-scene Cross-view Image Benchmark Across Drone and Satellite}, 
+      author={Runzhe Zhu},
+      year={2022},
+      eprint={2204.10704},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
+
+
+
+
+
+## Chinese Version
+
+### 双分支卷积网络训练和测试：
 
 1. 配置文件：settings.yaml
 
