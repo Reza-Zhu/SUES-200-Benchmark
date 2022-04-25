@@ -3,13 +3,7 @@ import os
 from torchvision import datasets, transforms
 from utils import get_yaml_value
 
-Batch_size = get_yaml_value('batch_size')
-height = get_yaml_value("height")
-data_path = get_yaml_value("dataset_path")
-image_size = get_yaml_value("image_size")
-
-
-def Create_Training_Datasets(train_data_path=data_path+"/Training/{}".format(height), batch_size=Batch_size):
+def Create_Training_Datasets(train_data_path, batch_size, image_size):
     training_data_loader = {}
     transform_drone_list = [
         transforms.Resize((image_size, image_size), interpolation=transforms.InterpolationMode.BICUBIC),
@@ -47,7 +41,7 @@ def Create_Training_Datasets(train_data_path=data_path+"/Training/{}".format(hei
     return training_data_loader
 
 
-def Create_Testing_Datasets(test_data_path=data_path+"/Testing/{}".format(height), batch_size=Batch_size):
+def Create_Testing_Datasets(test_data_path, batch_size, image_size):
     testing_data_loader = {}
     image_datasets = {}
     transforms_test_list = [

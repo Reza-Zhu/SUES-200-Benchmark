@@ -8,12 +8,13 @@ import pandas as pd
 from shutil import copyfile,copy
 from evaluation_methods import select_best_weight
 
-def get_yaml_value(key_name, file_name="settings.yaml"):
-    f = open(file_name, 'r', encoding="utf-8")
+
+def get_yaml_value(config_path):
+    f = open(config_path, 'r', encoding="utf-8")
     t_value = yaml.load(f, Loader=yaml.FullLoader)
     f.close()
-    params = t_value[key_name]
-    return params
+    # params = t_value[key_name]
+    return t_value
 
 
 def save_network(network, dir_model_name, epoch_label):
@@ -65,16 +66,16 @@ def get_model_list(dirname, key, seq):
     return last_model_name
 
 
-def load_network(seq):
-    model_name = get_yaml_value("model")
-    name = get_yaml_value("name")
-    weight_save_path = get_yaml_value("weight_save_path")
+def load_network(model_name, name, weight_save_path, classes, drop_rate, seq):
+    # model_name = get_yaml_value("model")
+    # name = get_yaml_value("name")
+    # weight_save_path = get_yaml_value("weight_save_path")
     dirname = os.path.join(weight_save_path, name)
     last_model_name = os.path.basename(get_model_list(dirname, 'net', seq))
     print(get_model_list(dirname, 'net', seq) + " " + "seq: " + str(seq))
     # print(os.path.join(dirname,last_model_name))
-    classes = get_yaml_value("classes")
-    drop_rate = get_yaml_value("drop_rate")
+    # classes = get_yaml_value("classes")
+    # drop_rate = get_yaml_value("drop_rate")
     model = model_.model_dict[model_name](classes, drop_rate)
     # model = model_.ResNet(classes, drop_rate)
     model.load_state_dict(torch.load(os.path.join(dirname, last_model_name)))
@@ -131,7 +132,7 @@ def parameter(index_name, index_number):
     with open("settings.yaml", "r", encoding="utf-8") as f:
         setting_dict = yaml.load(f, Loader=yaml.FullLoader)
         setting_dict[index_name] = index_number
-        print(setting_dict)
+        # print(setting_dict)
         f.close()
         with open("settings.yaml", "w", encoding="utf-8") as f:
             yaml.dump(setting_dict, f)
@@ -163,8 +164,17 @@ def summary_csv_extract_pic(csv_path):
             count = count + 1
 
 if __name__ == '__main__':
-    csv_list = glob.glob(os.path.join("result", "*matching.csv"))
-    print(len(csv_list))
-    for csv in csv_list:
-        summary_csv_extract_pic(csv)
-        # break
+    # csv_list = glob.glob(os.path.join("result", "*matching.csv"))
+    # print(len(csv_list))
+    # for csv in csv_list:
+    #     summary_csv_extract_pic(csv)
+    #     # break
+    model_name = "seresnet"
+    query_name = "query_satellite"
+    gallery_name = "gallery_drone"
+
+    csv_path = "/media/data1/save_loss2_weight"
+    print(select_best_weight("seresnet", csv_path))
+    for height in [200]:
+        net_path = get_best_weight(query_name, model_name, height, csv_path)
+        print(net_path)

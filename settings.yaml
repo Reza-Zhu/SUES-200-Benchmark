@@ -1,17 +1,29 @@
-# super parameters
 
-batch_size : 8
-fp16 : 0
-model : seresnet
-height : 150
-query : drone
-classes : 120
-num_epochs : 80
-drop_rate : 0.3
-weight_decay : 0.0001
-lr : 0.08
-name: seresnet_150_2022-03-19-09:45:54
+# dateset path
 dataset_path: /media/data1/Datasets
-weight_save_path: /media/data1/save_loss2_weight
-loss_function: contrastive
+weight_save_path: /media/data1/save_model_weight
+
+#intial parameters
+fp16 : 0
+classes : 120
 image_size: 384
+
+# choose model
+model : resnet
+
+# super parameters
+batch_size : 32
+num_epochs : 80
+drop_rate : 0.2
+weight_decay : 0.0005
+lr : 0.005
+
+# test and evaluate
+
+
+
+# if LPN
+block : 4
+
+# if SUES-200
+height : 150
