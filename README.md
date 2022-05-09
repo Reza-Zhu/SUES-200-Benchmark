@@ -20,7 +20,7 @@ My email : m025120503@sues.edu.cn
 - install other libs
 
 ```
-pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python pytorch_grad_cam
+pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python grad-cam
 ```
 
 ### Config File
