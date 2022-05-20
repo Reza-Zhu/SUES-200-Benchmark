@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 import random
-
+import argparse
 
 def create_dir(path):
     if not os.path.exists(path):
@@ -23,11 +23,16 @@ def create_datasets(path, data_list, character):
     print(character, " processed ", count, " classes ......")
 
 
-# 数据集分割系数
-SPLIT_VALUE = 0.6
+parser = argparse.ArgumentParser()
+parser.add_argument('--path', type=str, default='../../Datasets/SUES-200', help='dataset path')
+parser.add_argument('--coff', type=float, default=0.6, help='Split coff')
 
+opt = parser.parse_known_args()[0]
+
+# 数据集分割系数
+SPLIT_VALUE = opt.coff
 # 原始数据地址
-raw_datasets_path = "/media/data1/RAW_DATASETS"
+raw_datasets_path = opt.path
 video_name = ["150", "200", "250", "300"]
 
 Training_path = os.path.join(raw_datasets_path, "Training")
@@ -40,28 +45,25 @@ create_dir(Testing_path)
 for index_name in video_name:
     satellite_data_path = os.path.join(raw_datasets_path, "satellite-view")
     drone_data_path = os.path.join(raw_datasets_path, index_name)
+    print(drone_data_path)
 
     satellite_data_list = glob.glob(os.path.join(satellite_data_path, "*"))
+    print(satellite_data_list)
     drone_data_list = glob.glob(os.path.join(drone_data_path, "*"))
+    print(drone_data_list)
     sorted(drone_data_list)
     sorted(satellite_data_list)
-    # random.shuffle(satellite_data_list)
-    # random.shuffle(drone_data_list)
-    # print(satellite_data_list)
-    # print(drone_data_list)
+
     train_data_num = int(len(drone_data_list) * SPLIT_VALUE)
     test_data_num = int(len(drone_data_list) * (1 - SPLIT_VALUE))
 
-    print(train_data_num)
-    print(test_data_num)
+    print("training data number: ", train_data_num)
+    print("test data number: ", test_data_num)
 
     Training_satellite_data_list = satellite_data_list[:train_data_num]
     Training_drone_data_list = drone_data_list[:train_data_num]
     Testing_satellite_data_list = satellite_data_list[train_data_num:]
     Testing_drone_data_list = drone_data_list[train_data_num:]
-
-    # print(len(Testing_label_data_list))
-    # print(len(Training_sample_data_list))
 
     Training_index_path = os.path.join(Training_path, index_name)
     Testing_index_path = os.path.join(Testing_path, index_name)
