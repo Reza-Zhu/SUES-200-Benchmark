@@ -109,7 +109,6 @@ python test_and_evaluate --cfg settings.yaml --name resnet_150_2022-04-25-10:26:
   journal={arXiv preprint arXiv:2204.10704},
   year={2022}
 }
-}
 ```
 
 
