@@ -103,13 +103,12 @@ python test_and_evaluate --cfg settings.yaml --name resnet_150_2022-04-25-10:26:
 ## Citation
 
 ```
-@misc{zhu2022sues200,
-      title={SUES-200: A Multi-height Multi-scene Cross-view Image Benchmark Across Drone and Satellite}, 
-      author={Runzhe Zhu},
-      year={2022},
-      eprint={2204.10704},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+@article{zhu2022sues,
+  title={SUES-200: A Multi-height Multi-scene Cross-view Image Benchmark Across Drone and Satellite},
+  author={Zhu, Runzhe},
+  journal={arXiv preprint arXiv:2204.10704},
+  year={2022}
+}
 }
 ```
 
