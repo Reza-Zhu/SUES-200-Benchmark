@@ -40,11 +40,14 @@ Testing_path = os.path.join(raw_datasets_path, "Testing")
 
 create_dir(Training_path)
 create_dir(Testing_path)
-
+# os.dirs
+for name in glob.glob(os.path.join(raw_datasets_path, "*")):
+    if "drone" in name:
+        drone_name = os.path.basename(name)
 # origin data
 for index_name in video_name:
     satellite_data_path = os.path.join(raw_datasets_path, "satellite-view")
-    drone_data_path = os.path.join(raw_datasets_path, "drone-view", index_name)
+    drone_data_path = os.path.join(raw_datasets_path, drone_name)
     print(drone_data_path)
 
     satellite_data_list = glob.glob(os.path.join(satellite_data_path, "*"))
