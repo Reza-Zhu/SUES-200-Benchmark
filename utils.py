@@ -18,7 +18,8 @@ def get_yaml_value(config_path):
 
 
 def save_network(network, dir_model_name, epoch_label):
-    save_path = get_yaml_value('weight_save_path')
+    param_dict = get_yaml_value("settings.yaml")
+    save_path = param_dict['weight_save_path']
     # with open("settings.yaml", "r", encoding="utf-8") as f:
     #     dict = yaml.load(f, Loader=yaml.FullLoader)
     #     dict['name'] = dir_model_name
