@@ -21,20 +21,27 @@ base_model = torch.nn.Sequential(
     encoder.layer4,
 )
 
+param_dict = get_yaml_value("settings.yaml")
+
 dim = list(base_model.parameters())[-1].shape[0]
-netVLAD = NetVLAD(num_clusters=89, dim=dim, alpha=1.0)
+netVLAD = NetVLAD(num_clusters=120, dim=dim, alpha=1.0)
 model = EmbedNet(base_model, netVLAD).cuda()
 
-name = get_yaml_value("name")
-save_dirname = os.path.join("./save_model_weight", name)
+name = param_dict["name"]
+
+save_dirname = os.path.join(param_dict["weight_save_path"], name)
 last_model_name = os.path.basename(get_model_list(save_dirname, 'net', -1))
-print(last_model_name)
+
 model.load_state_dict(torch.load(os.path.join(save_dirname, last_model_name)))
 
 query_name = 'query_drone'
 gallery_name = 'gallery_satellite'
 
-image_datasets, data_loader = Create_Testing_Datasets()
+data_path = param_dict["dataset_path"]
+data_path = data_path + "/Testing/{}".format(param_dict["height"])
+image_datasets, data_loader = Create_Testing_Datasets(data_path, param_dict['batch_size'],
+                                                      param_dict["image_size"])
+
 query_path = image_datasets[query_name].imgs
 gallery_path = image_datasets[gallery_name].imgs
 
@@ -85,7 +92,7 @@ result = 'Recall@1:%.2f Recall@5:%.2f Recall@10:%.2f Recall@top10:%.2f AP:%.2f' 
     CMC[0] * 100, CMC[4] * 100, CMC[9] * 100, CMC[round(len(gallery_label) * 0.1)] * 100,
     ap / len(query_label) * 100)
 
-save_path = os.path.join('save_model_weight', get_yaml_value('name'))
+save_path = os.path.join(param_dict["weight_save_path"], param_dict['name'])
 save_txt_path = os.path.join(save_path,
                              '%s_to_%s_%s_%.2f_%.2f.txt' % (query_name[6:], gallery_name[8:], last_model_name[:7],
                                                             CMC[0] * 100, ap / len(query_label)*100))

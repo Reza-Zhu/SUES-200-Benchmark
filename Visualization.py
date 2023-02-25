@@ -7,15 +7,17 @@ import random
 import pandas as pd
 import numpy as np
 from torch import nn
-from evaluation_methods import select_best_weight
-from utils import get_yaml_value, which_view, get_id, get_best_weight
+from utils import get_yaml_value, which_view, get_id, get_best_weight,create_dir
 from test_and_evaluate import extract_feature
 from Preprocessing import Create_Testing_Datasets
+from shutil import copyfile, copy
 
 
-def get_rank(height, query_name, gallery_name, model_name, csv_path):
-    data_path = get_yaml_value("dataset_path")
-    data_path = data_path + "/Testing/{}".format(height)
+def get_rank(height, query_name, gallery_name, model_name):
+    param = get_yaml_value("settings.yaml")
+    csv_path = param["weight_save_path"]
+
+    data_path = param["dataset_path"] + "/Testing/{}".format(height)
     gallery_drone_path = os.path.join(data_path, "gallery_drone")
     gallery_satellite_path = os.path.join(data_path, "gallery_satellite")
     gallery_drone_list = glob.glob(os.path.join(gallery_drone_path, "*"))
@@ -40,7 +42,8 @@ def get_rank(height, query_name, gallery_name, model_name, csv_path):
             for img in img_list:
                 satellite_list.append(img)
 
-    image_datasets, data_loader = Create_Testing_Datasets(test_data_path=data_path)
+    image_datasets, data_loader = Create_Testing_Datasets(test_data_path=data_path, batch_size=param["batch_size"],
+                                                          image_size=param['image_size'])
     net_path = get_best_weight(query_name, model_name, height, csv_path)
     which_query = which_view(query_name)
     which_gallery = which_view(gallery_name)
@@ -75,18 +78,43 @@ def get_rank(height, query_name, gallery_name, model_name, csv_path):
     print(matching_table)
     save_path = "result/" + query_name.split("_")[-1] + "_" + model_name + "_" + str(height) + "_matching.csv"
     matching_table.to_csv(save_path)
+    print("check the result at " + save_path)
+    return save_path
 
+# summary selected images from get_rank() function in the "result" folder
 def summary_csv_extract_pic(csv_path):
-    csv_table = pd.read_csv(csv_path)
-    print(csv_table)
-    # csv_table[]
+    csv_table = pd.read_csv(csv_path, index_col=0)
+    create_dir("result")
+
+    csv_path = os.path.join("result", csv_path.split("_")[-3])
+    create_dir(csv_path)
+    query_pic = list(csv_table.columns)
+    for pic in query_pic:
+        dir_path = os.path.join(csv_path, pic.split("/")[-4] + "_" + pic.split("/")[-3])
+        create_dir(dir_path)
+        dir_path = os.path.join(dir_path, pic.split("/")[-2])
+        create_dir(dir_path)
+        copy(pic, dir_path)
+        gallery_list = list(csv_table[pic])
+        print(gallery_list)
+        count = 0
+        for gl_path in gallery_list:
+            print(gl_path)
+            copy(gl_path, dir_path)
+            src_name = os.path.join(dir_path, gl_path.split("/")[-1])
+            dest_name = os.path.dirname(src_name) + os.sep + str(count) + "_" + gl_path.split("/")[-2] + "." + gl_path.split(".")[-1]
+            print(src_name)
+            print(dest_name)
+            os.rename(src_name, dest_name)
+            count = count + 1
 
 
 if __name__ == '__main__':
-    query_name = 'query_satellite'
-    gallery_name = 'gallery_drone'
-    model_list = ["resnet", "seresnet", "dense"]
-    csv_path = "/media/data1/save_model_weight"
+    query_name = 'query_drone'
+    gallery_name = 'gallery_satellite'
+    model_list = ["vit"]
+
     for model in model_list:
         for height in [150, 200, 250, 300]:
-            get_rank(height, query_name, gallery_name, model, csv_path)
+            path = get_rank(height, query_name, gallery_name, model)
+            summary_csv_extract_pic(path)

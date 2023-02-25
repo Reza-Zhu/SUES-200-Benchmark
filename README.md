@@ -1,12 +1,22 @@
 # SUES-200: A Multi-height Multi-scene Cross-view Image Matching Benchmark Across UAV and Satellite
 
+This paper has been accepted by IEEE Transactions on Circuits and Systems for Video Technology. 
 
+arXiv Link: https://arxiv.org/abs/2204.10704
 
 ## Datasets
 
-Download SUES-200 dataset. You may send me an email and claim not use this dataset for profit. SUES-200 is **ONLY  available to academic research**.
+Download SUES-200 dataset. **Notices**: SUES-200 is **ONLY  available to academic research**.
 
 Google Drive Link: https://drive.google.com/file/d/1UyVyFJ_pRaJHIr_eBY2HL7gkS5y9UxqI/view?usp=share_link
+
+百度网盘：
+https://pan.baidu.com/s/1mrd-7ADm57_OchAvO1XmNw
+提取码：p836
+
+天翼网盘（不限速）：
+https://cloud.189.cn/t/yMnaEnR322Yj
+提取码：veh7
 
 My email : m025120503@sues.edu.cn
 
@@ -20,7 +30,7 @@ My email : m025120503@sues.edu.cn
 - install other libs
 
 ```
-pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python grad-cam
+pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python grad-cam einops
 ```
 
 ### Config File
@@ -72,30 +82,48 @@ mv your_path/Testing your_path/Dataset
 ### Train
 
 ```bash
-python train --cfg settings.yaml
+python train.py --cfg settings.yaml
 ```
 
 
 
-### Test & evaluate
+### Test & Evaluate
 
+#### Test basic model
 ```bash
-python test_and_evaluate --cfg settings.yaml --name resnet_150_2022-04-25-10:26:34 --seq -3
+python test_and_evaluate.py --cfg settings.yaml --name resnet_150_2022-04-25-10:26:34 --seq 3
+```
+#### Test Robustness to uncertainties
+```bash
+python test_and_evaluate_uncertainties.py --cfg settings.yaml --types ["snow", "fog"] --heights [150, 200]
 ```
 
 
+
+### Ablation Experiments
+
+#### Test Distance Measurement Algorithm
+```bash
+python test_and_evaluate.py --dist Eu
+```
+#### Test Ensemble Strategies in Multiply Queries
+```bash
+# Max Pooling
+python multi_test_and_evaluate_pooling.py --type max
+# Voting
+python multi_test_and_evaluate_voting.py
+```
 
 ## TO-DO List
 
 - [ ] Improve README.md (ing...)
-  - [ ] Evaluation methods
-  - [ ] Visualization
-  - [ ] Multiqueries
-  - [ ] Draw heat map
+  - [X] Evaluation methods
+  - [X] Visualization
+  - [X] Multiqueries
+  - [X] Draw heat map
   - [ ] ...
 
 - [ ] Support University-1652 (ing....)
-- [ ] Support CVUSA and CVACT
 - [ ] ...
 
 
@@ -121,7 +149,6 @@ python test_and_evaluate --cfg settings.yaml --name resnet_150_2022-04-25-10:26:
 
 3. 开始测试：执行 test_and_evaluate.py 会开始测试并输出测试结果，最后的结果会保存在save_model_weight中
 
-4. 开始评估：执行 evaluation_methods.py 评估算法的适应性、稳定性、实时性。
 
 基于网格搜素的自动调参数文件：AutoTuning.py
 
@@ -137,6 +164,4 @@ VLAD 复现代码：VLAD文件夹
 
 NetVLAD 复现代码：NetVLAD文件夹，train_NetVLAD.py test_NetVlAD.py
 
-### 其它文件
 
-数据增强方式：autoaugment.py random_erasing.py

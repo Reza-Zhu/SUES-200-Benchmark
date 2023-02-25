@@ -14,8 +14,8 @@ import torch.backends.cudnn as cudnn
 
 from Preprocessing import Create_Training_Datasets
 from utils import get_yaml_value, save_network, parameter, create_dir
+from test_and_evaluate import eval_and_test
 from model_ import ClassBlock
-import matplotlib.pyplot as plt
 import os
 
 if torch.cuda.is_available():
@@ -24,6 +24,7 @@ cudnn.benchmark = True
 
 
 def train(config_path):
+    # config_path = "settings.yaml."
     param_dict = get_yaml_value(config_path)
     print(param_dict)
     classes = param_dict["classes"]
@@ -42,10 +43,9 @@ def train(config_path):
                                            image_size=size)
     print("Dataloader Preprocessing Finished...")
 
-    model = model_.model_dict[model_name](classes, drop_rate, share_weight=False)
-    # model.load_state_dict(torch.load("/media/data1/save_model_weight/seresnet_1652_2022-03-29-03:35:20/net_132.pth"))
-    # model.classifier = ClassBlock(2048, classes, drop_rate)
+    model = model_.model_dict[model_name](classes, drop_rate, share_weight=False, pretrained=True)
 
+    model.classifier = ClassBlock(768, classes, drop_rate)
     model = model.cuda()
     ignored_params = list(map(id, model.classifier.parameters()))
     base_params = filter(lambda p: id(p) not in ignored_params, model.parameters())
@@ -59,7 +59,7 @@ def train(config_path):
         # from apex.fp16_utils import *
         try:
             from apex import amp, optimizers
-            model, optimizer_ft = amp.initialize(model, optimizer, opt_level="O1")
+            model, optimizer_ft = amp.initialize(model, optimizer, opt_level="O2")
 
         except ImportError:
             print("please install apex")
@@ -128,7 +128,7 @@ def train(config_path):
               .format(epoch + 1, num_epochs, "Train", epoch_loss, drone_acc * 100, satellite_acc * 100, time_elapsed))
 
         if drone_acc > 0.97 and satellite_acc > 0.97:
-            if epoch_loss < MAX_LOSS:
+            if epoch_loss < MAX_LOSS and epoch > (num_epochs - 20):
                 MAX_LOSS = epoch_loss
                 save_network(model, dir_model_name, epoch + 1)
                 print(model_name + " Epoch: " + str(epoch + 1) + " has saved with loss: " + str(epoch_loss))
@@ -146,3 +146,4 @@ if __name__ == '__main__':
     opt = parse_opt(True)
     print(opt.cfg)
     train(opt.cfg)
+

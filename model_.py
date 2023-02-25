@@ -233,7 +233,7 @@ class base_LPN(nn.Module):
     def __init__(self, class_num, droprate=0.5, stride=2, init_model=None, pool='avg', block=4,
                  pretrained = True):
         super(base_LPN, self).__init__()
-        model_ft = timm.create_model("resnet50", pretrained=pretrained, num_classes=0)
+        model_ft = timm.create_model("seresnet50", pretrained=pretrained, num_classes=0)
         # avg pooling to global pooling
         if stride == 1:
             model_ft.layer4[0].downsample[0].stride = (1, 1)
@@ -390,15 +390,19 @@ if __name__ == '__main__':
     # import ssl
 
     # ssl._create_default_https_context = ssl._create_unverified_context
-    model = ResNet(100, 0.1).cuda()
+    model = LPN(100, 0.1).cuda()
     # model = EfficientNet_b()
-    print(model.device)
+    # print(model.device)
     # print(model.extract_features)
     # Here I left a simple forward function.
     # Test the model, before you train it.
     input = torch.randn(16, 3, 384, 384).cuda()
-    output, output = model(input, input)
-    print(output.size())
+    output1, output2 = model(input, input)
+
+
+    print(output1[0].size())
+    print(output2[0].size())
+
     # print(output)
 
 model_dict = {

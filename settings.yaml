@@ -1,22 +1,22 @@
 
 # dateset path
-dataset_path: /media/data1/Datasets
-weight_save_path: /media/data1/save_model_weight
+dataset_path: /home/sues/media/disk2/Datasets
+weight_save_path: /home/sues/media/disk2/save_model_weight
 
 #intial parameters
-fp16 : 0
+fp16 : 1
 classes : 120
 image_size: 384
 
 # choose model
-model : resnet
+model : vit
 
 # super parameters
-batch_size : 32
-num_epochs : 80
-drop_rate : 0.2
-weight_decay : 0.0005
-lr : 0.005
+batch_size : 8
+num_epochs : 60
+drop_rate : 0.5
+weight_decay : 0.0001
+lr : 0.001
 
 # test and evaluate
 
@@ -26,4 +26,4 @@ lr : 0.005
 block : 4
 
 # if SUES-200
-height : 150
+height : 200

@@ -16,18 +16,31 @@ from Preprocessing import Create_Testing_Datasets
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
 
-def evaluate(qf, ql, gf, gl):
+def evaluate(qf, ql, gf, gl, dist):
 
-    query = qf.view(-1, 1)
-    score = torch.mm(gf, query)
-    score = score.squeeze(1).cpu()
-    score = score.numpy()
+    # Eu Distance
+    if "Eu" == dist:
+        query = qf.view(1, -1)
+        En_dist = nn.PairwiseDistance(p=2)
+        score = En_dist(query, gf).cpu()
+        index = np.argsort(score)  # from small to large
 
+    elif "Man" == dist:
+        # Man Distance
+        query = qf.view(1, -1)
+        En_dist = nn.PairwiseDistance(p=1)
+        score = En_dist(query, gf).cpu()
+        index = np.argsort(score)  # from small to large
 
-    # predict index
-    index = np.argsort(score)  # from small to large
+    # Cosine Distance
+    elif "Cos" in dist:
+        query = qf.view(-1, 1)
+        score = torch.mm(gf, query)
+        score = score.squeeze(1).cpu()
+        score = score.numpy()
+        index = np.argsort(score)  # from small to large
+        index = index[::-1]
 
-    index = index[::-1]
     query_index = np.argwhere(gl == ql)
     good_index = query_index
 
@@ -35,6 +48,7 @@ def evaluate(qf, ql, gf, gl):
 
     CMC_tmp = compute_mAP(index, good_index, junk_index)
     return CMC_tmp
+
 
 
 def compute_mAP(index, good_index, junk_index):
@@ -104,7 +118,7 @@ def extract_feature(model, dataloaders, view_index=1):
 
 
 ############################### main function #######################################
-def eval_and_test(cfg_path, name, seq):
+def eval_and_test(cfg_path, name, seqs, dist):
     print("Testing Start >>>>>>>>")
 
     params = get_yaml_value(cfg_path)
@@ -127,7 +141,7 @@ def eval_and_test(cfg_path, name, seq):
             evaluate_csv = pd.read_csv(table_path)
             evaluate_csv.index = evaluate_csv["index"]
         for query in ['drone', 'satellite']:
-            for seq in range(seq, 0):
+            for seq in range(-seqs, 0):
                 model, net_name = load_network(model_name=params["model"], name=name,
                                                weight_save_path=params["weight_save_path"], classes=params["classes"],
                                                drop_rate=params["drop_rate"], seq=seq)
@@ -168,14 +182,6 @@ def eval_and_test(cfg_path, name, seq):
                     gallery_feature = extract_feature(model, data_loader[gallery_name], which_gallery)
                     time_elapsed = time.time() - since
 
-                # if get_yaml_value("query") == "satellite":
-                #     query_name = 'satellite'
-                #     gallery_name = 'drone'
-                # elif get_yaml_value("query") == "drone":
-                #     query_name = 'drone'
-                #     gallery_name = 'satellite'
-                #
-
                 # fed tensor to GPU
                 query_feature = query_feature.cuda()
                 gallery_feature = gallery_feature.cuda()
@@ -188,7 +194,7 @@ def eval_and_test(cfg_path, name, seq):
                 ap = 0.0
 
                 for i in range(len(query_label)):
-                    ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label)
+                    ap_tmp, CMC_tmp = evaluate(query_feature[i], query_label[i], gallery_feature, gallery_label, dist)
                     if CMC_tmp[0] == -1:
                         continue
                     CMC += CMC_tmp
@@ -216,7 +222,6 @@ def eval_and_test(cfg_path, name, seq):
                 save_txt_path = os.path.join(save_path,
                                              '%s_to_%s_%s_%.2f_%.2f.txt' % (query_name[6:], gallery_name[8:], net_name[:7],
                                                                             recall_1, AP))
-                # print(save_txt_path)
 
                 with open(save_txt_path, 'w') as f:
                     f.write(evaluate_result)
@@ -229,6 +234,7 @@ def eval_and_test(cfg_path, name, seq):
         query_number = len(list(filter(lambda x: "drone" in x, evaluate_csv.columns)))
 
         for index in evaluate_csv.index:
+
             drone_max.append(evaluate_csv.loc[index].iloc[:query_number].max())
             satellite_max.append(evaluate_csv.loc[index].iloc[query_number:].max())
 
@@ -245,7 +251,9 @@ def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='settings.yaml', help='config file XXX.yaml path')
     parser.add_argument('--name', type=str, default='', help='evaluate which model, name')
-    parser.add_argument('--seq', type=int, default=-3, help='evaluate how many models from loss(small -> big)')
+    parser.add_argument('--seq', type=int, default=1, help='evaluate how many weights from loss(small -> big)')
+    parser.add_argument('--dist', type=str, default='Cos', help='feature distance algorithm: Cosine(Cos), '
+                                                                'Euclidean(Eu), Manhattan(Man)')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
 
@@ -255,4 +263,4 @@ def parse_opt(known=False):
 if __name__ == '__main__':
     opt = parse_opt(True)
 
-    eval_and_test(opt.cfg, opt.name, opt.seq)
+    eval_and_test(opt.cfg, opt.name, opt.seq, opt.dist)

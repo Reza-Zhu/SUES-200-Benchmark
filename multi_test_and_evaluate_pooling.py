@@ -6,11 +6,12 @@ import model_
 import torch
 import scipy.io
 import shutil
+from einops import rearrange
 import argparse
 import numpy as np
 import pandas as pd
 from torch import nn
-from utils import fliplr, load_network, which_view, get_id, get_yaml_value, get_best_weight
+from utils import fliplr, load_network, which_view, get_id, get_yaml_value, get_best_weight, create_dir, parameter
 from Preprocessing import Create_Testing_Datasets
 
 if torch.cuda.is_available():
@@ -103,18 +104,17 @@ def extract_feature(model, dataloaders, view_index=1):
     return features
 
 
-def eval_and_test(multi_coff, config_file):
-
-    table_path = os.path.join("result", "multi_query" + ".csv")
-    evaluate_csv = pd.DataFrame(index=["recall@1", "recall@5", "recall@10", "recall@1p", "AP", "time"])
-    multi = True
-
+def eval_and_test(multi_coff, config_file, type, save_path):
     param = get_yaml_value(config_file)
+
+    create_dir(save_path)
+    table_path = os.path.join(save_path, param["model"] + "_" + str(param['height']) + "_" + "multi_query_" + type +
+                              ".csv")
+    evaluate_csv = pd.DataFrame(index=["recall@1", "recall@5", "recall@10", "recall@1p", "AP", "time"])
 
     # coff = 1  query images = 50/1 = 50
     # coff = 2  query images = 50/2 = 25
 
-    # model_name = "seresnet"
     query_name = "query_drone"
     gallery_name = "gallery_satellite"
 
@@ -152,7 +152,6 @@ def eval_and_test(multi_coff, config_file):
 
     # fed tensor to GPU
     query_feature = query_feature.cuda()
-    new_query_feature = torch.FloatTensor().cuda()
     gallery_feature = gallery_feature.cuda()
 
     image_per_class = len(query_label) // (200 - param["classes"]) // multi_coff
@@ -161,24 +160,26 @@ def eval_and_test(multi_coff, config_file):
     feature_list = list(range(0, query_length, image_per_class))
     query_concat = np.ones(((len(feature_list)-1)//multi_coff, multi_coff))
 
-    if multi:
-        query_label = np.intersect1d(query_label, gallery_label)
-        for i in range(len(query_label)):
+    query_label = np.intersect1d(query_label, gallery_label)
+    for i in range(len(query_label)):
 
-            query_concat[i] = query_label[i] * query_concat[i]
+        query_concat[i] = query_label[i] * query_concat[i]
 
-        query_label = query_concat.reshape(-1,)
-        for i in range(len(feature_list)):
-            if feature_list[i] == (query_length - image_per_class):
-                continue
-            multi_feature = torch.mean(query_feature[feature_list[i]:feature_list[i+1], :], 0).view(1, 512)
-            new_query_feature = torch.cat((new_query_feature, multi_feature), 0)
+    query_label = query_concat.reshape(-1,)
 
-        query_feature = new_query_feature
+    # pooling
+    query_feature = rearrange(query_feature, "h w -> w h")
 
-    # CMC = recall
+    if type == "max":
+        # Max pooling
+        m = torch.nn.MaxPool1d(image_per_class)
+    elif type == "ave":
+        # Average pooling
+        m = torch.nn.AvgPool1d(image_per_class)
+
+    query_feature = m(query_feature)
+    query_feature = rearrange(query_feature, "h w -> w h")
     CMC = torch.IntTensor(len(gallery_label)).zero_()
-    # ap = average precision
     ap = 0.0
 
     for i in range(len(query_label)):
@@ -200,7 +201,7 @@ def eval_and_test(multi_coff, config_file):
                  "_" + str(param["height"])] = \
         [float(recall_1), float(recall_5),
          float(recall_10), float(recall_1p),
-         float(AP), float(time_elapsed)]
+         float(AP), float(0)]
 
     print(evaluate_csv)
 
@@ -212,9 +213,13 @@ def eval_and_test(multi_coff, config_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--multi', type=int, default=1, help='multi number for example: if multi==1 fusion image '
-                                                             'number = 50/1 = 50')
+
     parser.add_argument('--cfg', type=str, default='settings.yaml', help='config file XXX.yaml path')
+    parser.add_argument('--multi', type=int, default=1, help='multi number for example: if multi == 1 fusion image '
+                                                             'number = 50/1 = 50')
+    parser.add_argument('--type', type=str, default="ave", help='feature ensemble strategy, '
+                                                                'ave: average pooling or max: max pooling')
+    parser.add_argument('--csv_save_path', type=str, default="./result", help="evaluation result table store path")
     opt = parser.parse_known_args()[0]
 
-    eval_and_test(opt.multi, opt.cfg)
+    eval_and_test(opt.multi, opt.cfg, opt.type, opt.csv_save_path)

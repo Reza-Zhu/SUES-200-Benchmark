@@ -48,14 +48,10 @@ for name in glob.glob(os.path.join(raw_datasets_path, "*")):
 for index_name in video_name:
     satellite_data_path = os.path.join(raw_datasets_path, "satellite-view")
     drone_data_path = os.path.join(raw_datasets_path, drone_name)
-    print(drone_data_path)
 
     satellite_data_list = glob.glob(os.path.join(satellite_data_path, "*"))
-    print(satellite_data_list)
     drone_data_list = glob.glob(os.path.join(drone_data_path, "*"))
-    print(drone_data_list)
-    sorted(drone_data_list)
-    sorted(satellite_data_list)
+
 
     train_data_num = int(len(drone_data_list) * SPLIT_VALUE)
     test_data_num = int(len(drone_data_list) * (1 - SPLIT_VALUE))

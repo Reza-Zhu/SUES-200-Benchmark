@@ -9,9 +9,21 @@ from utils import get_best_weight
 from torch import nn
 from torchvision import models, transforms
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam import GuidedBackpropReLUModel, GradCAM, GradCAMPlusPlus, EigenGradCAM, EigenCAM
+from pytorch_grad_cam import GuidedBackpropReLUModel, GradCAM, GradCAMPlusPlus, EigenGradCAM, EigenCAM, AblationCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image, preprocess_image
 
+def reshape_transform(tensor, height=24, width=24):
+    # print(tensor.shape)
+    result = tensor[:, 1:, :].reshape(tensor.size(0),
+                                      height, width, tensor.size(2))
+    # print(result.shape)
+    # result = rearrange(result, "b (h w) y -> b y h w", h=24, w=24)
+    # Bring the channels to the first dimension,
+    # like in CNNs.
+    result = result.transpose(2, 3).transpose(1, 2)
+    # print(result.shape)
+
+    return result
 
 if __name__ == '__main__':
 
@@ -19,10 +31,10 @@ if __name__ == '__main__':
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
     query_name = "query_drone"
-    model_name = "seresnet"
-    pic_name = "08"
+    model_name = "vit"
+    pic_name = "40"
     heights = [150, 200, 250, 300]
-    csv_path = "/media/data1/save_model_weight"
+    csv_path = "/home/sues/media/disk2/save_model_weight"
     for height in heights:
 
         net_path = get_best_weight(query_name, model_name, height, csv_path)
@@ -32,24 +44,25 @@ if __name__ == '__main__':
         end_name = None
         if "satellite" in query_name:
             model = model.model_1
-            target_layers = [model.layer4[-1]]
+            target_layers = [model.blocks[-1].norm1]
             height = "satellite"
             end_name = ".png"
 
         elif "drone" in query_name:
             model = model.model_2
-            target_layers = [model.layer4[-1]]
+            target_layers = [model.blocks[-1].norm1]
             end_name = ".jpg"
 
-        image_path = os.path.join("./data/Heat maps",
+        image_path = os.path.join("./Heat maps",
                                   str(height), pic_name + end_name)
         print(image_path)
-        save_path = os.path.join(f"./data/Heat maps", str(height), model_name + "_heat_" + image_path.split("/")[-1])
+        save_path = os.path.join(f"./Heat maps", str(height), model_name + "_heat_" + image_path.split("/")[-1])
         print(save_path)
         model.eval()
         model.cuda()
         cam = EigenCAM(model=model,
                        target_layers=target_layers,
+                       reshape_transform=reshape_transform,
                        use_cuda=True,
                        )
 
@@ -58,10 +71,9 @@ if __name__ == '__main__':
         rgb_img = np.float32(rgb_img) / 255
         input_tensor = preprocess_image(rgb_img, mean=[0.485, 0.456, 0.406],
                                         std=[0.229, 0.224, 0.225])
-        targets = [ClassifierOutputTarget(1)]
+        targets = [ClassifierOutputTarget(100)]
 
         grayscale_cam = cam(input_tensor=input_tensor,
-                            # targets=targets,
                             eigen_smooth=True,
                             aug_smooth=True
                             )
