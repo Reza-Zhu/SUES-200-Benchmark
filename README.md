@@ -114,6 +114,20 @@ python multi_test_and_evaluate_pooling.py --type max
 python multi_test_and_evaluate_voting.py
 ```
 
+## Citation
+```text
+@ARTICLE{zhu2023sues,
+  author={Zhu, Runzhe and Yin, Ling and Yang, Mingze and Wu, Fei and Yang, Yuncheng and Hu, Wenbo},
+  journal={IEEE Transactions on Circuits and Systems for Video Technology}, 
+  title={SUES-200: A Multi-height Multi-scene Cross-view Image Benchmark Across Drone and Satellite}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TCSVT.2023.3249204}}
+
+```
+
 ## TO-DO List
 
 - [ ] Improve README.md (ing...)
