@@ -2,86 +2,98 @@ import os
 import glob
 import shutil
 import random
+import yaml
 import argparse
+
 
 def create_dir(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
 
-def create_datasets(path, data_list, character):
-    count = 0
-    for i in data_list:
-        count = count + 1
-        num = i[-4:]
-        character_path = os.path.join(path, character)
-        # print(character_path)
-        path_ = os.path.join(character_path, num)
-        # print("src",i)
-        # print("dst",path_)
-        shutil.copytree(i, path_)
-    print(character, " processed ", count, " classes ......")
+def create_datasets(path, origin_data_path):
+    num = path[-4:]
+    src_path = os.path.join(origin_data_path, num)
+    shutil.copytree(src_path, path)
+
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--path', type=str, default='../../Datasets/SUES-200', help='dataset path')
-parser.add_argument('--coff', type=float, default=0.6, help='Split coff')
+parser.add_argument('--path', type=str, default='/home/sues/media/disk1/RAW_DATASETS/SUES-200', help='dataset path')
 
 opt = parser.parse_known_args()[0]
 
-# 数据集分割系数
-SPLIT_VALUE = opt.coff
 # 原始数据地址
 raw_datasets_path = opt.path
 video_name = ["150", "200", "250", "300"]
+
+f = open("../indexs.yaml", 'r', encoding="utf-8")
+t_value = yaml.load(f, Loader=yaml.FullLoader)
+datasets = ["{:0>4d}".format(i+1) for i in range(200)]
+
+train_indexes = t_value["index"]
+test_indexes = []
+for index in datasets:
+    if index not in train_indexes:
+        test_indexes.append(index)
 
 Training_path = os.path.join(raw_datasets_path, "Training")
 Testing_path = os.path.join(raw_datasets_path, "Testing")
 
 create_dir(Training_path)
 create_dir(Testing_path)
-# os.dirs
+
 for name in glob.glob(os.path.join(raw_datasets_path, "*")):
     if "drone" in name:
         drone_name = os.path.basename(name)
-# origin data
+
 for index_name in video_name:
     satellite_data_path = os.path.join(raw_datasets_path, "satellite-view")
-    drone_data_path = os.path.join(raw_datasets_path, drone_name)
-
-    satellite_data_list = glob.glob(os.path.join(satellite_data_path, "*"))
-    drone_data_list = glob.glob(os.path.join(drone_data_path, "*"))
-
-
-    train_data_num = int(len(drone_data_list) * SPLIT_VALUE)
-    test_data_num = int(len(drone_data_list) * (1 - SPLIT_VALUE))
-
-    print("training data number: ", train_data_num)
-    print("test data number: ", test_data_num)
-
-    Training_satellite_data_list = satellite_data_list[:train_data_num]
-    Training_drone_data_list = drone_data_list[:train_data_num]
-    Testing_satellite_data_list = satellite_data_list[train_data_num:]
-    Testing_drone_data_list = drone_data_list[train_data_num:]
+    drone_data_path = os.path.join(raw_datasets_path, drone_name, index_name)
 
     Training_index_path = os.path.join(Training_path, index_name)
     Testing_index_path = os.path.join(Testing_path, index_name)
 
+    Training_drone_data_list = [os.path.join(Training_index_path, "drone", i) for i in train_indexes]
+    Training_satellite_data_list = [os.path.join(Training_index_path, "satellite", i) for i in train_indexes]
+
     create_dir(Training_index_path)
     create_dir(Testing_index_path)
-    #
-    ## Training dataset
-    create_datasets(Training_index_path, Training_drone_data_list, "drone")
-    create_datasets(Training_index_path, Training_satellite_data_list, "satellite")
-    #
-    ## Testing dataset
-    query_drone_path = os.path.join(Testing_index_path, "query_drone")
-    query_satellite_path = os.path.join(Testing_index_path, "query_satellite")
-    gallery_drone_path = os.path.join(Testing_index_path, "gallery_drone")
-    gallery_satellite_path = os.path.join(Testing_index_path, "gallery_satellite")
 
-    create_datasets(query_drone_path, Testing_drone_data_list, "")
-    create_datasets(query_satellite_path, Testing_satellite_data_list, "")
+    # Training dataset
+    create_dir(os.path.join(Training_index_path, "drone"))
+    create_dir(os.path.join(Training_index_path, "satellite"))
 
-    create_datasets(gallery_drone_path, drone_data_list, "")
-    create_datasets(gallery_satellite_path, satellite_data_list, "")
+    print("Copying... " + index_name + "m training set of satellite")
+    for satellite_index_path in Training_satellite_data_list:
+        create_datasets(satellite_index_path, satellite_data_path)
+
+    print("Copying... " + index_name + "m training set of drone")
+    for drone_index_path in Training_drone_data_list:
+        create_datasets(drone_index_path, drone_data_path)
+
+    # Testing dataset
+    Testing_drone_data_list = [os.path.join(Testing_index_path, "query_drone", i) for i in test_indexes]
+    Testing_satellite_data_list = [os.path.join(Testing_index_path, "query_satellite", i) for i in test_indexes]
+
+    print("Copying... " + index_name + "m testing set of query satellite")
+    for satellite_index_path in Testing_satellite_data_list:
+        create_datasets(satellite_index_path, satellite_data_path)
+
+    print("Copying... " + index_name + "m testing set of query drone")
+
+    for drone_index_path in Testing_drone_data_list:
+        create_datasets(drone_index_path, drone_data_path)
+
+    Testing_drone_data_list = [os.path.join(Testing_index_path, "gallery_drone", i) for i in datasets]
+    Testing_satellite_data_list = [os.path.join(Testing_index_path, "gallery_satellite", i) for i in datasets]
+
+    print("Copying... " + index_name + "m testing set of gallery satellite")
+
+    for satellite_indaex_path in Testing_satellite_data_list:
+        create_datasets(satellite_index_path, satellite_data_path)
+
+    print("Copying... " + index_name + "m testing set of gallery drone ")
+
+    for drone_index_path in Testing_drone_data_list:
+        create_datasets(drone_index_path, drone_data_path)
