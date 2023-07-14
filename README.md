@@ -30,7 +30,7 @@ My email : m025120503@sues.edu.cn
 - install other libs
 
 ```
-pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python grad-cam einops
+pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python grad-cam einops imgaug
 ```
 
 ### Config File
@@ -71,7 +71,7 @@ height : 150
 ### Split Dataset
 
 ```bash
-python script/split_dataset.py --path your_path --coff 0.6
+python script/split_dataset.py --path your_path 
 mkdir your_path/Dataset
 mv your_path/Training your_path/Dataset
 mv your_path/Testing your_path/Dataset
