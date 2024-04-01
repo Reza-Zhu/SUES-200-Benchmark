@@ -20,7 +20,9 @@ https://cloud.189.cn/t/yMnaEnR322Yj
 
 My email : m025120503@sues.edu.cn
 
+## Pre-trained Weight
 
+链接: https://pan.baidu.com/s/1aq51FLfg3bPG4xoNW1Usxw?pwd=rbnu 提取码: rbnu 
 
 ## Quickly Start
 
