@@ -18,7 +18,7 @@ https://pan.baidu.com/s/1mrd-7ADm57_OchAvO1XmNw
 https://cloud.189.cn/t/yMnaEnR322Yj
 提取码：veh7
 
-My email : m025120503@sues.edu.cn
+My email : rzzhu24@m.fudan.edu.cn
 
 ## Pre-trained Weight
 
