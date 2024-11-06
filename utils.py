@@ -68,18 +68,11 @@ def get_model_list(dirname, key, seq):
 
 
 def load_network(model_name, name, weight_save_path, classes, drop_rate, seq):
-    # model_name = get_yaml_value("model")
-    # name = get_yaml_value("name")
-    # weight_save_path = get_yaml_value("weight_save_path")
     dirname = os.path.join(weight_save_path, name)
     last_model_name = os.path.basename(get_model_list(dirname, 'net', seq))
     print(get_model_list(dirname, 'net', seq) + " " + "seq: " + str(seq))
-    # print(os.path.join(dirname,last_model_name))
-    # classes = get_yaml_value("classes")
-    # drop_rate = get_yaml_value("drop_rate")
     model = model_.model_dict[model_name](classes, drop_rate)
-    # model = model_.ResNet(classes, drop_rate)
-    # model.load_state_dict(torch.load(os.path.join(dirname, last_model_name)))
+    model.load_state_dict(torch.load(os.path.join(dirname, last_model_name)))
     return model, last_model_name
 
 
