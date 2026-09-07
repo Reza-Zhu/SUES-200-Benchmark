@@ -1,0 +1,11 @@
+torch
+torchvision
+timm
+pyyaml
+pytorch-metric-learning
+scipy
+pandas
+opencv-python
+grad-cam
+einops
+imgaug

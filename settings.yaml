@@ -1,7 +1,7 @@
 
 # dateset path
-dataset_path: /home/sues/media/disk2/Datasets
-weight_save_path: /home/sues/media/disk2/save_model_weight
+dataset_path: /home/LVM_date/zhurz/dataset/SUES-200-512x512
+weight_save_path: /home/LVM_date/zhurz/experiments/SUES-200-Benchmark/save_model_weight
 
 #intial parameters
 fp16 : 1
@@ -10,6 +10,7 @@ image_size: 384
 
 # choose model
 model : vit
+pretrained: true
 
 # super parameters
 batch_size : 8
@@ -27,3 +28,13 @@ block : 4
 
 # if SUES-200
 height : 200
+
+# runtime
+device: cuda
+num_workers: 4
+pin_memory: true
+prefetch_factor: 2
+eval_amp: false
+eval_chunk_size: 256
+lr_milestones: [20, 40]
+lr_gamma: 0.1

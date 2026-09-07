@@ -1,45 +1,47 @@
-import os
-import sys
 import glob
-import yaml
-import torch
-import model_
+import os
+import re
+from pathlib import Path
+
 import pandas as pd
+import torch
+import yaml
+
+import model_
 
 
 
 def get_yaml_value(config_path):
-    f = open(config_path, 'r', encoding="utf-8")
-    t_value = yaml.load(f, Loader=yaml.FullLoader)
-    f.close()
-    # params = t_value[key_name]
-    return t_value
+    with open(config_path, "r", encoding="utf-8") as config_file:
+        values = yaml.safe_load(config_file)
+    if not isinstance(values, dict):
+        raise ValueError(f"Configuration must be a mapping: {config_path}")
+    return values
 
 
-def save_network(network, dir_model_name, epoch_label):
-    param_dict = get_yaml_value("settings.yaml")
-    save_path = param_dict['weight_save_path']
-    # save_path = "/home/sues/media/disk2/save_model_weight"
-    # with open("settings.yaml", "r", encoding="utf-8") as f:
-    #     dict = yaml.load(f, Loader=yaml.FullLoader)
-    #     dict['name'] = dir_model_name
-    #     with open("settings.yaml", "w", encoding="utf-8") as f:
-    #         yaml.dump(dict, f)
+def get_device(device_name=None):
+    """Resolve a configured device while falling back safely when CUDA is absent."""
+    if device_name and str(device_name).startswith("cuda") and not torch.cuda.is_available():
+        return torch.device("cpu")
+    return torch.device(device_name or ("cuda" if torch.cuda.is_available() else "cpu"))
 
-    # if not os.path.isdir(os.path.join(save_path, dir_model_name)):
-    #     os.mkdir(os.path.join(save_path, dir_model_name))
 
+def save_network(network, dir_model_name, epoch_label, weight_save_path=None):
+    """Save a checkpoint without relying on the process working directory."""
+    if weight_save_path is None:
+        weight_save_path = get_yaml_value("settings.yaml")["weight_save_path"]
     if isinstance(epoch_label, int):
         save_filename = 'net_%03d.pth' % epoch_label
     else:
         save_filename = 'net_%s.pth' % epoch_label
-    save_path = os.path.join(save_path, dir_model_name, save_filename)
-    torch.save(network.state_dict(), save_path)
+    save_path = Path(weight_save_path) / dir_model_name
+    save_path.mkdir(parents=True, exist_ok=True)
+    torch.save(network.state_dict(), save_path / save_filename)
 
 
 def fliplr(img):
-    '''flip horizontal'''
-    inv_idx = torch.arange(img.size(3) - 1, -1, -1).long()  # N x C x H x W
+    """Flip a BCHW tensor horizontally."""
+    inv_idx = torch.arange(img.size(3) - 1, -1, -1, device=img.device)
     img_flip = img.index_select(3, inv_idx)
     return img_flip
 
@@ -50,112 +52,122 @@ def which_view(name):
     elif 'drone' in name:
         return 2
     else:
-        print('unknown view')
-    return -1
+        raise ValueError(f"Unknown view name: {name}")
 
 
 def get_model_list(dirname, key, seq):
-    if os.path.exists(dirname) is False:
-        print('no dir: %s' % dirname)
-        return None
-    gen_models = [os.path.join(dirname, f) for f in os.listdir(dirname) if
-                  os.path.isfile(os.path.join(dirname, f)) and key in f and ".pth" in f]
-    if gen_models is None:
-        return None
-    gen_models.sort()
-    last_model_name = gen_models[seq]
-    return last_model_name
+    if not os.path.isdir(dirname):
+        raise FileNotFoundError(f"Checkpoint directory does not exist: {dirname}")
+
+    def checkpoint_key(path):
+        match = re.search(r"(\d+)(?=\.pth$)", path.name)
+        return (0, int(match.group(1))) if match else (1, path.name)
+
+    gen_models = sorted(
+        (path for path in Path(dirname).glob(f"*{key}*.pth") if path.is_file()),
+        key=checkpoint_key,
+    )
+    if not gen_models:
+        raise FileNotFoundError(f"No checkpoint matching '*{key}*.pth' in {dirname}")
+    try:
+        return str(gen_models[seq])
+    except IndexError as exc:
+        raise IndexError(
+            f"Checkpoint index {seq} is out of range; found {len(gen_models)} files in {dirname}"
+        ) from exc
 
 
-def load_network(model_name, name, weight_save_path, classes, drop_rate, seq):
+def load_network_from_path(model_name, checkpoint_path, classes, drop_rate, device=None):
+    model_factory = model_.model_dict[model_name]
+    try:
+        model = model_factory(classes, drop_rate, pretrained=False)
+    except TypeError:
+        # Keep compatibility with older/custom model constructors.
+        model = model_factory(classes, drop_rate)
+    map_location = device if device is not None else "cpu"
+    checkpoint = torch.load(checkpoint_path, map_location=map_location)
+    if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+        checkpoint = checkpoint["state_dict"]
+    model.load_state_dict(checkpoint)
+    return model, os.path.basename(checkpoint_path)
+
+
+def load_network(model_name, name, weight_save_path, classes, drop_rate, seq, device=None):
     dirname = os.path.join(weight_save_path, name)
-    last_model_name = os.path.basename(get_model_list(dirname, 'net', seq))
-    print(get_model_list(dirname, 'net', seq) + " " + "seq: " + str(seq))
-    model = model_.model_dict[model_name](classes, drop_rate)
-    model.load_state_dict(torch.load(os.path.join(dirname, last_model_name)))
-    return model, last_model_name
+    checkpoint_path = get_model_list(dirname, "net", seq)
+    print(checkpoint_path + " " + "seq: " + str(seq))
+    return load_network_from_path(model_name, checkpoint_path, classes, drop_rate, device)
 
 
 def get_id(img_path):
-    camera_id = []
     labels = []
     paths = []
-    for path, v in img_path:
-        folder_name = os.path.basename(os.path.dirname(path))
+    for path, _ in img_path:
+        folder_name = Path(path).parent.name
         labels.append(int(folder_name))
         paths.append(path)
     return labels, paths
 
 
 def create_dir(path):
-    if not os.path.exists(path):
-        os.mkdir(path)
+    os.makedirs(path, exist_ok=True)
+
+def _height_csvs(model_name, csv_path, height):
+    return [
+        Path(path)
+        for path in glob.glob(os.path.join(csv_path, f"{model_name}*.csv"))
+        if f"_{height}_" in Path(path).stem or Path(path).stem.endswith(f"_{height}")
+    ]
+
+
+def _best_csv(csv_paths, score_column):
+    if not csv_paths:
+        return None
+
+    def score(path):
+        table = pd.read_csv(path, index_col=0)
+        if score_column in table.columns:
+            return float(table.at["recall@1", score_column])
+        prefix = "query_drone_" if score_column == "drone_max" else "query_satellite_"
+        columns = [column for column in table.columns if column.startswith(prefix)]
+        return max(float(table.at["recall@1", column]) for column in columns)
+
+    return max(csv_paths, key=score)
+
 
 def select_best_weight(model_name, csv_path):
-    # csv_path = "./save_model_weight"
-    model_csv_list = glob.glob(os.path.join(csv_path, model_name + "*.csv"))
-
+    """Return the best result CSV for each supported height and query view."""
     drone_list = []
     satellite_list = []
-
-    csv_150_list = list(filter(lambda i: "150" in i, model_csv_list))
-    csv_200_list = list(filter(lambda i: "200" in i, model_csv_list))
-    csv_250_list = list(filter(lambda i: "250" in i, model_csv_list))
-    csv_300_list = list(filter(lambda i: "300" in i, model_csv_list))
-    csv_lists = [csv_150_list, csv_200_list, csv_250_list, csv_300_list]
-
-    for csv_list in csv_lists:
-        drone_recall1_max = 0
-        drone_csv_index = None
-        satellite_recall1_max = 0
-        satellite_csv_index = None
-        for csv in csv_list:
-            table = pd.read_csv(csv, index_col=0)
-            drone_recall1 = table.at["recall@1", "drone_max"]
-            satellite_recall1 = table.at["recall@1", "satellite_max"]
-            if satellite_recall1 > satellite_recall1_max:
-                satellite_recall1_max = satellite_recall1
-                satellite_csv_index = csv
-
-            if drone_recall1 > drone_recall1_max:
-                drone_recall1_max = drone_recall1
-                drone_csv_index = csv
-
-        drone_list.append(drone_csv_index)
-        satellite_list.append(satellite_csv_index)
-
+    for height in (150, 200, 250, 300):
+        csv_paths = _height_csvs(model_name, csv_path, height)
+        drone_list.append(str(_best_csv(csv_paths, "drone_max")) if csv_paths else None)
+        satellite_list.append(str(_best_csv(csv_paths, "satellite_max")) if csv_paths else None)
     return drone_list, satellite_list
 
+
 def get_best_weight(query_name, model_name, height, csv_path):
-    drone_best_list, satellite_best_list = select_best_weight(model_name, csv_path)
-    # print(drone_best_list, satellite_best_list)
-    net_path = None
-    if "drone" in query_name:
-        for weight in drone_best_list:
-            if str(height) in weight:
-                drone_best_weight = weight.split(".")[0]
-                table = pd.read_csv(weight, index_col=0)
-                query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
+    """Resolve the checkpoint with the best Recall@1 for one query direction."""
+    score_column = "drone_max" if "drone" in query_name else "satellite_max"
+    best_csv = _best_csv(_height_csvs(model_name, csv_path, height), score_column)
+    if best_csv is None:
+        raise FileNotFoundError(
+            f"No evaluation CSV for model={model_name}, height={height} under {csv_path}"
+        )
 
-                values = list(table.loc["recall@1", :])[:query_number]
-                indexes = list(table.loc["recall@1", :].index)[:query_number]
-                net_name = indexes[values.index(max(values))]
-                net = net_name.split("_")[2] + "_" + net_name.split("_")[3]
-                net_path = os.path.join(drone_best_weight, net)
-                # print(values, indexes)
-    if "satellite" in query_name:
-        for weight in satellite_best_list:
-            if str(height) in weight:
-                satellite_best_weight = weight.split(".")[0]
-                table = pd.read_csv(weight, index_col=0)
-                query_number = len(list(filter(lambda x: "drone" in x, table.columns))) - 1
-
-                values = list(table.loc["recall@1", :])[query_number:query_number*2]
-                indexes = list(table.loc["recall@1", :].index)[query_number:query_number*2]
-                net_name = indexes[values.index(max(values))]
-                net = net_name.split("_")[2] + "_" + net_name.split("_")[3]
-                net_path = os.path.join(satellite_best_weight, net)
-    return net_path
+    table = pd.read_csv(best_csv, index_col=0)
+    view = "drone" if "drone" in query_name else "satellite"
+    prefix = f"query_{view}_"
+    candidates = [column for column in table.columns if column.startswith(prefix)]
+    if not candidates:
+        raise ValueError(f"No {view} query columns found in {best_csv}")
+    checkpoint_name = max(
+        candidates, key=lambda column: float(table.at["recall@1", column])
+    )[len(prefix):]
+    checkpoint_path = best_csv.with_suffix("") / checkpoint_name
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"Selected checkpoint does not exist: {checkpoint_path}")
+    return str(checkpoint_path)
 
 def parameter(index_name, index_number):
     with open("settings.yaml", "r", encoding="utf-8") as f:

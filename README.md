@@ -1,183 +1,205 @@
-# SUES-200: A Multi-height Multi-scene Cross-view Image Matching Benchmark Across UAV and Satellite
+# SUES-200 Benchmark
 
-This paper has been accepted by IEEE Transactions on Circuits and Systems for Video Technology. 
+SUES-200 is a multi-height, multi-scene cross-view image matching benchmark
+between UAV/drone and satellite images. The repository contains the original
+dual-branch baselines together with a maintained data preparation, training,
+feature extraction, and retrieval evaluation pipeline.
 
-arXiv Link: https://arxiv.org/abs/2204.10704
+The benchmark paper was published in IEEE Transactions on Circuits and Systems
+for Video Technology. The dataset is available for academic research only.
 
-## Datasets
+## Dataset and pretrained weights
 
-Download SUES-200 dataset. **Notices**: SUES-200 is **ONLY  available to academic research**.
+Dataset links:
 
-Google Drive Link: https://drive.google.com/file/d/1UyVyFJ_pRaJHIr_eBY2HL7gkS5y9UxqI/view?usp=share_link
+- [Google Drive](https://drive.google.com/file/d/1UyVyFJ_pRaJHIr_eBY2HL7gkS5y9UxqI/view?usp=share_link)
+- Baidu Pan: `https://pan.baidu.com/s/1mrd-7ADm57_OchAvO1XmNw` (提取码：`p836`)
+- Tianyi: `https://cloud.189.cn/t/yMnaEnR322Yj` (提取码：`veh7`)
 
-百度网盘：
-https://pan.baidu.com/s/1mrd-7ADm57_OchAvO1XmNw
-提取码：p836
+Pretrained weights: `https://pan.baidu.com/s/1aq51FLfg3bPG4xoNW1Usxw?pwd=rbnu`
+(提取码：`rbnu`).
 
-天翼网盘（不限速）：
-https://cloud.189.cn/t/yMnaEnR322Yj
-提取码：veh7
+The raw archive should contain both views:
 
-My email : rzzhu24@m.fudan.edu.cn
-
-## Pre-trained Weight
-
-链接: https://pan.baidu.com/s/1aq51FLfg3bPG4xoNW1Usxw?pwd=rbnu 提取码: rbnu 
-
-## Quickly Start
-
-### Installation
-
-- Install Pytorch Torchvision https://pytorch.org/get-started/locally/
-- install other libs
-
-```
-pip install timm pyyaml pytorch-metric-learning scipy pandas opencv-python grad-cam einops imgaug
+```text
+SUES-200-512x512/
+├── drone_view_512/
+│   └── 0001/150/*.jpg
+└── satellite-view/
+    └── 0001/0.png
 ```
 
-### Config File
+Drone images are organized by scene and height (`150`, `200`, `250`, `300`).
+Satellite images are organized by scene and are shared across heights.
 
-default: settings.yaml
+## Installation
 
-```yaml
-# dateset path
-dataset_path: /media/data1/Datasets
-weight_save_path: /media/data1/save_model_weight
-
-# intial parameters
-fp16 : 0  # apex
-classes : 120 # 200*0.6=120
-image_size: 384
-
-# choose model
-model : resnet
-
-# super parameters
-batch_size : 32
-num_epochs : 80
-drop_rate : 0.2
-weight_decay : 0.0005
-lr : 0.005
-
-# test and evaluate
-
-
-# if LPN
-block : 4
-
-# if SUES-200
-height : 150
-
-```
-
-### Split Dataset
+Install a PyTorch build appropriate for the target CUDA version first, then
+install the remaining dependencies:
 
 ```bash
-python script/split_dataset.py --path your_path 
-mkdir your_path/Dataset
-mv your_path/Training your_path/Dataset
-mv your_path/Testing your_path/Dataset
+python -m pip install torch torchvision
+python -m pip install -r requirements.txt
 ```
 
+`imgaug` is only required by the uncertainty/robustness evaluation entrypoint;
+the normal training and retrieval paths do not import it eagerly.
 
+## Configuration
 
-### Train
+Edit [`settings.yaml`](settings.yaml) for the target machine. Important fields:
+
+| Field | Meaning |
+| --- | --- |
+| `dataset_path` | Raw/prepared SUES-200 root directory |
+| `weight_save_path` | Checkpoint and evaluation output directory |
+| `model` | Backbone name, for example `resnet`, `vit`, or `LPN` |
+| `height` | Drone height: `150`, `200`, `250`, or `300` |
+| `pretrained` | Whether training initializes timm backbones with pretrained weights |
+| `batch_size` | Batch size for each view loader |
+| `num_workers` / `prefetch_factor` | Image loading throughput controls |
+| `eval_chunk_size` | GPU memory/throughput trade-off for batched retrieval |
+| `eval_amp` | Optional mixed precision during evaluation; `false` is reproducible default |
+
+Set `pretrained: false` when the server has no cached timm weights or no network
+access. The evaluator always loads checkpoints without downloading pretrained
+weights.
+
+## End-to-end workflow
+
+### 1. Prepare ImageFolder links
+
+From the repository root:
+
+```bash
+python script/split_datasets.py --path /path/to/SUES-200-512x512
+```
+
+The script reads [`script/indexs.yaml`](script/indexs.yaml) relative to itself
+and creates:
+
+```text
+SUES-200-512x512/
+├── Training/<height>/{drone,satellite}/<scene>/
+└── Testing/<height>/{query_drone,query_satellite,
+                      gallery_drone,gallery_satellite}/<scene>/
+```
+
+Directory symlinks are used by default, so the raw images are not duplicated.
+Use copying only when the filesystem does not support symlinks:
+
+```bash
+python script/split_datasets.py \
+  --path /path/to/SUES-200-512x512 \
+  --mode copy
+```
+
+The script is idempotent for links that already point to the correct source.
+It stops on missing view/scene/height directories instead of silently creating
+an incomplete benchmark.
+
+### 2. Train
+
+Run the configured number of epochs:
 
 ```bash
 python train.py --cfg settings.yaml
 ```
 
+Run a one-epoch end-to-end check without changing the YAML file:
 
-
-### Test & Evaluate
-
-#### Test basic model
 ```bash
-python test_and_evaluate.py --cfg settings.yaml --name resnet_150_2022-04-25-10:26:34 --seq 3
-```
-#### Test Robustness to uncertainties
-```bash
-python test_and_evaluate_uncertainties.py --cfg settings.yaml --types ["snow", "fog"] --heights [150, 200]
+python train.py --cfg settings.yaml --epochs 1
 ```
 
+Training uses independent drone and satellite batches. If the two views contain
+different numbers of images, the shorter loader is restarted so the longer
+loader is not silently truncated. The best finite epoch is saved as
+`<weight_save_path>/<model>_<height>_<timestamp>/net_<epoch>.pth`, together with
+`settings_saved.yaml`.
 
+### 3. Evaluate a checkpoint
 
-### Ablation Experiments
+For an existing checkpoint directory:
 
-#### Test Distance Measurement Algorithm
 ```bash
-python test_and_evaluate.py --dist Eu
+python test_and_evaluate.py \
+  --cfg settings.yaml \
+  --name resnet_200_YYYY-MM-DD-HH:MM:SS \
+  --seq 1 \
+  --dist Cos
 ```
-#### Test Ensemble Strategies in Multiply Queries
+
+For one checkpoint file, use the direct form:
+
 ```bash
-# Max Pooling
-python multi_test_and_evaluate_pooling.py --type max
-# Voting
-python multi_test_and_evaluate_voting.py
+python test_and_evaluate.py \
+  --cfg settings.yaml \
+  --checkpoint /path/to/net_041.pth \
+  --dist Cos
 ```
+
+The evaluator computes both directions:
+
+- `query_drone → gallery_satellite`
+- `query_satellite → gallery_drone`
+
+It reports Recall@1/5/10, Recall@1%, AP, and elapsed time. Features for the
+four views are extracted once per checkpoint, then retrieval is performed in
+chunks. Results are written to `<weight_save_path>/<name>.csv` and text files
+under the checkpoint directory.
+
+Euclidean and Manhattan distance are also available:
+
+```bash
+python test_and_evaluate.py --cfg settings.yaml --name <name> --dist Eu
+python test_and_evaluate.py --cfg settings.yaml --name <name> --dist Man
+```
+
+### 4. Optional evaluations
+
+Robustness evaluation requires `imgaug`:
+
+```bash
+python test_and_evaluate_uncertainties.py \
+  --cfg settings.yaml \
+  --types rain fog snow flip black \
+  --heights 150 200 250 300
+```
+
+Multi-query pooling for drone queries:
+
+```bash
+python multi_test_and_evaluate_pooling.py \
+  --cfg settings.yaml \
+  --multi 2 \
+  --type ave
+```
+
+`test.py` remains a compatibility alias for the maintained evaluator.
+`evaluate.py` remains available for legacy `pytorch_result.mat` feature dumps.
+
+## Verification
+
+Run the lightweight retrieval tests after installing the dependencies:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+For a quick operational check, use `--epochs 1` and a small
+`eval_chunk_size`. A one-epoch run confirms data loading, model construction,
+forward/backward, AMP/device handling, and checkpoint writing; it does not
+represent converged benchmark quality.
 
 ## Citation
+
 ```text
 @ARTICLE{zhu2023sues,
   author={Zhu, Runzhe and Yin, Ling and Yang, Mingze and Wu, Fei and Yang, Yuncheng and Hu, Wenbo},
-  journal={IEEE Transactions on Circuits and Systems for Video Technology}, 
-  title={SUES-200: A Multi-height Multi-scene Cross-view Image Benchmark Across Drone and Satellite}, 
+  journal={IEEE Transactions on Circuits and Systems for Video Technology},
+  title={SUES-200: A Multi-height Multi-scene Cross-view Image Benchmark Across Drone and Satellite},
   year={2023},
-  volume={},
-  number={},
-  pages={1-1},
-  doi={10.1109/TCSVT.2023.3249204}}
-
+  doi={10.1109/TCSVT.2023.3249204}
+}
 ```
-
-## TO-DO List
-
-- [ ] Improve README.md (ing...)
-  - [X] Evaluation methods
-  - [X] Visualization
-  - [X] Multiqueries
-  - [X] Draw heat map
-  - [ ] ...
-
-- [ ] Support University-1652 (ing....)
-- [ ] ...
-
-
-
-## Chinese Version
-
-### 双分支卷积网络训练和测试：
-
-1. 配置文件：settings.yaml
-
-   该配置文件配置了 
-
-   - 数据集地址 dataset_path
-   - 权重文件保存地址 weight_save_path
-   - 选取不同高度的数据 height
-   - 训练时选用的特征提取模型 model
-   - 训练时的学习率 lr
-   - 训练轮数 num_epoch
-   - 模型中的drop out  drop_rate
-   - 训练时的批次大小 batch_size
-
-2. 开始训练：执行 train.py 会根据上面配置好的参数进行训练，比较好的模型权重会保存在权重文件保存地址下的save_model_weight文件夹中（训练时会自动创建该文件夹）
-
-3. 开始测试：执行 test_and_evaluate.py 会开始测试并输出测试结果，最后的结果会保存在save_model_weight中
-
-
-基于网格搜素的自动调参数文件：AutoTuning.py
-
-定义特征提取算法的文件：model_.py
-
-CBAM_ResNet 算法模型定义：senet/cbam_resnet.py
-
-### 数据集预处理，和其它一些算法在本数据集上的复现
-
-数据集预处理文件夹：script
-
-VLAD 复现代码：VLAD文件夹
-
-NetVLAD 复现代码：NetVLAD文件夹，train_NetVLAD.py test_NetVlAD.py
-
-

@@ -1,102 +1,140 @@
-import os
-import glob
-import shutil
-import random
-import yaml
+"""Create the ImageFolder layout used by the SUES-200 training scripts.
+
+The raw SUES-200 archive stores one directory per scene. This script creates
+the train/query/gallery view of that archive using directory symlinks by
+default, so preparing all four heights does not duplicate the image files.
+Use ``--mode copy`` only when the destination must be self-contained.
+"""
+
+from __future__ import annotations
+
 import argparse
+import shutil
+from pathlib import Path
+
+import yaml
 
 
-def create_dir(path):
-    if not os.path.exists(path):
-        os.mkdir(path)
+DEFAULT_HEIGHTS = ("150", "200", "250", "300")
+SCENE_NAMES = tuple(f"{index:04d}" for index in range(1, 201))
 
 
-def create_datasets(path, origin_data_path, index_name):
-    num = path[-4:]
-    # src_path = os.path.join(origin_data_path, num)
-    if "drone" in path:
-        src_path = os.path.join(origin_data_path, num, index_name)
-    elif "satellite" in path:
-        src_path = os.path.join(origin_data_path, num)
-    shutil.copytree(src_path, path)
+def load_train_scenes(index_file: Path) -> set[str]:
+    with index_file.open("r", encoding="utf-8") as handle:
+        values = yaml.safe_load(handle) or {}
+    train_scenes = values.get("index")
+    if not isinstance(train_scenes, list) or not train_scenes:
+        raise ValueError(f"Expected a non-empty 'index' list in {index_file}")
+    train_scenes = {str(scene).zfill(4) for scene in train_scenes}
+    unknown = train_scenes.difference(SCENE_NAMES)
+    if unknown:
+        raise ValueError(f"Unknown scene names in {index_file}: {sorted(unknown)}")
+    return train_scenes
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--path', type=str, default='../../Desktop/SUES-200-512x512', help='dataset path')
+def find_source_roots(dataset_root: Path) -> tuple[Path, Path]:
+    satellite_candidates = ("satellite-view", "satellite_view_512", "satellite-view_512")
+    drone_candidates = ("drone_view_512", "drone-view", "drone-view_512")
+    satellite_root = next(
+        (dataset_root / name for name in satellite_candidates if (dataset_root / name).is_dir()),
+        None,
+    )
+    drone_root = next(
+        (dataset_root / name for name in drone_candidates if (dataset_root / name).is_dir()),
+        None,
+    )
+    missing = []
+    if satellite_root is None:
+        missing.append("satellite-view (or satellite_view_512/satellite-view_512)")
+    if drone_root is None:
+        missing.append("drone_view_512 (or drone-view/drone-view_512)")
+    if missing:
+        raise FileNotFoundError(
+            f"Missing raw SUES-200 source directory under {dataset_root}: {', '.join(missing)}"
+        )
+    return satellite_root, drone_root
 
-opt = parser.parse_known_args()[0]
 
-# 原始数据地址
-raw_datasets_path = opt.path
-video_name = ["150", "200", "250", "300"]
+def install_view(source: Path, destination: Path, mode: str) -> None:
+    if destination.is_symlink():
+        if destination.resolve() == source.resolve():
+            return
+        raise FileExistsError(f"Existing symlink points elsewhere: {destination}")
+    if destination.exists():
+        raise FileExistsError(
+            f"Destination already exists: {destination}. Remove only this generated split or choose another root."
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if mode == "symlink":
+        destination.symlink_to(source, target_is_directory=True)
+    else:
+        shutil.copytree(source, destination)
 
-f = open("../indexs.yaml", 'r', encoding="utf-8")
-t_value = yaml.load(f, Loader=yaml.FullLoader)
-datasets = ["{:0>4d}".format(i+1) for i in range(200)]
 
-train_indexes = t_value["index"]
-test_indexes = []
-for index in datasets:
-    if index not in train_indexes:
-        test_indexes.append(index)
+def prepare_split(
+    dataset_root: Path,
+    index_file: Path,
+    heights: tuple[str, ...],
+    mode: str,
+) -> None:
+    satellite_root, drone_root = find_source_roots(dataset_root)
+    train_scenes = load_train_scenes(index_file)
+    test_scenes = set(SCENE_NAMES).difference(train_scenes)
+    print(f"dataset={dataset_root}")
+    print(f"satellite_root={satellite_root}")
+    print(f"drone_root={drone_root}")
+    print(f"train_scenes={len(train_scenes)} test_scenes={len(test_scenes)} mode={mode}")
 
-Training_path = os.path.join(raw_datasets_path, "Training")
-Testing_path = os.path.join(raw_datasets_path, "Testing")
+    jobs = (
+        ("Training", "drone", train_scenes, drone_root, True),
+        ("Training", "satellite", train_scenes, satellite_root, False),
+        ("Testing", "query_drone", test_scenes, drone_root, True),
+        ("Testing", "query_satellite", test_scenes, satellite_root, False),
+        ("Testing", "gallery_drone", set(SCENE_NAMES), drone_root, True),
+        ("Testing", "gallery_satellite", set(SCENE_NAMES), satellite_root, False),
+    )
+    prepared = 0
+    for height in heights:
+        before = prepared
+        for split, view, scenes, source_root, height_dependent in jobs:
+            for scene in sorted(scenes):
+                source = source_root / scene
+                if height_dependent:
+                    source /= height
+                if not source.is_dir():
+                    raise FileNotFoundError(f"Missing source scene/height directory: {source}")
+                destination = dataset_root / split / height / view / scene
+                install_view(source, destination, mode)
+                prepared += 1
+        print(f"height={height}: prepared {prepared - before} scene links/copies")
+    print(f"prepared={prepared}")
 
-create_dir(Training_path)
-create_dir(Testing_path)
 
-for name in glob.glob(os.path.join(raw_datasets_path, "*")):
-    if "drone" in name:
-        drone_name = os.path.basename(name)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--path", type=Path, required=True, help="raw SUES-200 dataset directory")
+    parser.add_argument(
+        "--index-file",
+        type=Path,
+        default=Path(__file__).with_name("indexs.yaml"),
+        help="YAML file containing the training scene list",
+    )
+    parser.add_argument(
+        "--heights", nargs="+", default=list(DEFAULT_HEIGHTS),
+        help="heights to prepare (default: 150 200 250 300)",
+    )
+    parser.add_argument(
+        "--mode", choices=("symlink", "copy"), default="symlink",
+        help="link raw directories without duplication, or copy them",
+    )
+    return parser.parse_args()
 
-for index_name in video_name:
-    satellite_data_path = os.path.join(raw_datasets_path, "satellite-view")
-    drone_data_path = os.path.join(raw_datasets_path, drone_name)
 
-    Training_index_path = os.path.join(Training_path, index_name)
-    Testing_index_path = os.path.join(Testing_path, index_name)
-
-    Training_drone_data_list = [os.path.join(Training_index_path, "drone", i) for i in train_indexes]
-    Training_satellite_data_list = [os.path.join(Training_index_path, "satellite", i) for i in train_indexes]
-
-    create_dir(Training_index_path)
-    create_dir(Testing_index_path)
-
-    # Training dataset
-    create_dir(os.path.join(Training_index_path, "drone"))
-    create_dir(os.path.join(Training_index_path, "satellite"))
-
-    print("Copying... " + index_name + "m training set of satellite")
-    for satellite_index_path in Training_satellite_data_list:
-        create_datasets(satellite_index_path, satellite_data_path, index_name)
-
-    print("Copying... " + index_name + "m training set of drone")
-    for drone_index_path in Training_drone_data_list:
-        create_datasets(drone_index_path, drone_data_path, index_name)
-
-    # Testing dataset
-    Testing_drone_data_list = [os.path.join(Testing_index_path, "query_drone", i) for i in test_indexes]
-    Testing_satellite_data_list = [os.path.join(Testing_index_path, "query_satellite", i) for i in test_indexes]
-
-    print("Copying... " + index_name + "m testing set of query satellite")
-    for satellite_index_path in Testing_satellite_data_list:
-        create_datasets(satellite_index_path, satellite_data_path, index_name)
-
-    print("Copying... " + index_name + "m testing set of query drone")
-
-    for drone_index_path in Testing_drone_data_list:
-        create_datasets(drone_index_path, drone_data_path, index_name)
-
-    Testing_drone_data_list = [os.path.join(Testing_index_path, "gallery_drone", i) for i in datasets]
-    Testing_satellite_data_list = [os.path.join(Testing_index_path, "gallery_satellite", i) for i in datasets]
-
-    print("Copying... " + index_name + "m testing set of gallery satellite")
-
-    for satellite_index_path in Testing_satellite_data_list:
-        create_datasets(satellite_index_path, satellite_data_path, index_name)
-
-    print("Copying... " + index_name + "m testing set of gallery drone ")
-
-    for drone_index_path in Testing_drone_data_list:
-        create_datasets(drone_index_path, drone_data_path, index_name)
+if __name__ == "__main__":
+    options = parse_args()
+    prepare_split(
+        dataset_root=options.path.expanduser().resolve(),
+        index_file=options.index_file.expanduser().resolve(),
+        heights=tuple(str(height) for height in options.heights),
+        mode=options.mode,
+    )

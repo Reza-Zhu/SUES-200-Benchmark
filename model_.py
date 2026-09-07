@@ -184,14 +184,14 @@ class EfficientV1(nn.Module):
 
 
 class EfficientV2(nn.Module):
-    def __init__(self, classes, drop_rate,  share_weight=False):
+    def __init__(self, classes, drop_rate, share_weight=False, pretrained=True):
         super(EfficientV2, self).__init__()
-        self.model_1 = timm.create_model("efficientnetv2_s", num_classes=0)
+        self.model_1 = timm.create_model("efficientnetv2_s", pretrained=pretrained, num_classes=0)
 
         if share_weight:
             self.model_2 = self.model_1
         else:
-            self.model_2 = timm.create_model("efficientnetv2_s", num_classes=0)
+            self.model_2 = timm.create_model("efficientnetv2_s", pretrained=pretrained, num_classes=0)
         self.classifier = ClassBlock(1280, classes, drop_rate)
 
     def forward(self, x1, x2):
@@ -390,13 +390,14 @@ if __name__ == '__main__':
     # import ssl
 
     # ssl._create_default_https_context = ssl._create_unverified_context
-    model = LPN(100, 0.1).cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = LPN(100, 0.1).to(device)
     # model = EfficientNet_b()
     # print(model.device)
     # print(model.extract_features)
     # Here I left a simple forward function.
     # Test the model, before you train it.
-    input = torch.randn(16, 3, 384, 384).cuda()
+    input = torch.randn(16, 3, 384, 384, device=device)
     output1, output2 = model(input, input)
 
 
