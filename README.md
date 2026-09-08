@@ -19,6 +19,12 @@ UAV / Drone ↔ Satellite
 
 ---
 
+<p align="center">
+  <img src="assets/sues200-readme-hero.png" alt="SUES-200 cross-view matching between UAV and satellite imagery" width="100%">
+</p>
+
+---
+
 ## Overview
 
 SUES-200 is a benchmark for matching UAV/drone images with satellite images
